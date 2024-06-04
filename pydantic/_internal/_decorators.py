@@ -4,9 +4,24 @@ from __future__ import annotations as _annotations
 from collections import deque
 from dataclasses import dataclass, field
 from functools import cached_property, partial, partialmethod
-from inspect import Parameter, Signature, isdatadescriptor, ismethoddescriptor, signature
+from inspect import (
+    Parameter,
+    Signature,
+    isdatadescriptor,
+    ismethoddescriptor,
+    signature,
+)
 from itertools import islice
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterable, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Iterable,
+    TypeVar,
+    Union,
+)
 
 from pydantic_core import PydanticUndefined, core_schema
 from typing_extensions import Literal, TypeAlias, is_typeddict
@@ -36,10 +51,10 @@ class ValidatorDecoratorInfo:
         check_fields: Whether to check that the fields actually exist on the model.
     """
 
-    decorator_repr: ClassVar[str] = '@validator'
+    decorator_repr: ClassVar[str] = "@validator"
 
     fields: tuple[str, ...]
-    mode: Literal['before', 'after']
+    mode: Literal["before", "after"]
     each_item: bool
     always: bool
     check_fields: bool | None
@@ -57,7 +72,7 @@ class FieldValidatorDecoratorInfo:
         check_fields: Whether to check that the fields actually exist on the model.
     """
 
-    decorator_repr: ClassVar[str] = '@field_validator'
+    decorator_repr: ClassVar[str] = "@field_validator"
 
     fields: tuple[str, ...]
     mode: FieldValidatorModes
@@ -74,8 +89,8 @@ class RootValidatorDecoratorInfo:
         mode: The proposed validator mode.
     """
 
-    decorator_repr: ClassVar[str] = '@root_validator'
-    mode: Literal['before', 'after']
+    decorator_repr: ClassVar[str] = "@root_validator"
+    mode: Literal["before", "after"]
 
 
 @dataclass(**slots_true)
@@ -93,9 +108,9 @@ class FieldSerializerDecoratorInfo:
         check_fields: Whether to check that the fields actually exist on the model.
     """
 
-    decorator_repr: ClassVar[str] = '@field_serializer'
+    decorator_repr: ClassVar[str] = "@field_serializer"
     fields: tuple[str, ...]
-    mode: Literal['plain', 'wrap']
+    mode: Literal["plain", "wrap"]
     return_type: Any
     when_used: core_schema.WhenUsed
     check_fields: bool | None
@@ -114,8 +129,8 @@ class ModelSerializerDecoratorInfo:
             and `'json-unless-none'`.
     """
 
-    decorator_repr: ClassVar[str] = '@model_serializer'
-    mode: Literal['plain', 'wrap']
+    decorator_repr: ClassVar[str] = "@model_serializer"
+    mode: Literal["plain", "wrap"]
     return_type: Any
     when_used: core_schema.WhenUsed
 
@@ -130,8 +145,8 @@ class ModelValidatorDecoratorInfo:
         mode: The proposed serializer mode.
     """
 
-    decorator_repr: ClassVar[str] = '@model_validator'
-    mode: Literal['wrap', 'before', 'after']
+    decorator_repr: ClassVar[str] = "@model_validator"
+    mode: Literal["wrap", "before", "after"]
 
 
 DecoratorInfo: TypeAlias = """Union[
@@ -144,10 +159,8 @@ DecoratorInfo: TypeAlias = """Union[
     ComputedFieldInfo,
 ]"""
 
-ReturnType = TypeVar('ReturnType')
-DecoratedType: TypeAlias = (
-    'Union[classmethod[Any, Any, ReturnType], staticmethod[Any, ReturnType], Callable[..., ReturnType], property]'
-)
+ReturnType = TypeVar("ReturnType")
+DecoratedType: TypeAlias = "Union[classmethod[Any, Any, ReturnType], staticmethod[Any, ReturnType], Callable[..., ReturnType], property]"
 
 
 @dataclass  # can't use slots here since we set attributes on `__post_init__`
@@ -170,16 +183,20 @@ class PydanticDescriptorProxy(Generic[ReturnType]):
     shim: Callable[[Callable[..., Any]], Callable[..., Any]] | None = None
 
     def __post_init__(self):
-        for attr in 'setter', 'deleter':
+        for attr in "setter", "deleter":
             if hasattr(self.wrapped, attr):
                 f = partial(self._call_wrapped_attr, name=attr)
                 setattr(self, attr, f)
 
-    def _call_wrapped_attr(self, func: Callable[[Any], None], *, name: str) -> PydanticDescriptorProxy[ReturnType]:
+    def _call_wrapped_attr(
+        self, func: Callable[[Any], None], *, name: str
+    ) -> PydanticDescriptorProxy[ReturnType]:
         self.wrapped = getattr(self.wrapped, name)(func)
         return self
 
-    def __get__(self, obj: object | None, obj_type: type[object] | None = None) -> PydanticDescriptorProxy[ReturnType]:
+    def __get__(
+        self, obj: object | None, obj_type: type[object] | None = None
+    ) -> PydanticDescriptorProxy[ReturnType]:
         try:
             return self.wrapped.__get__(obj, obj_type)
         except AttributeError:
@@ -187,15 +204,17 @@ class PydanticDescriptorProxy(Generic[ReturnType]):
             return self.wrapped  # type: ignore[return-value]
 
     def __set_name__(self, instance: Any, name: str) -> None:
-        if hasattr(self.wrapped, '__set_name__'):
-            self.wrapped.__set_name__(instance, name)  # pyright: ignore[reportFunctionMemberAccess]
+        if hasattr(self.wrapped, "__set_name__"):
+            self.wrapped.__set_name__(
+                instance, name
+            )  # pyright: ignore[reportFunctionMemberAccess]
 
     def __getattr__(self, __name: str) -> Any:
         """Forward checks for __isabstractmethod__ and such."""
         return getattr(self.wrapped, __name)
 
 
-DecoratorInfoType = TypeVar('DecoratorInfoType', bound=DecoratorInfo)
+DecoratorInfoType = TypeVar("DecoratorInfoType", bound=DecoratorInfo)
 
 
 @dataclass(**slots_true)
@@ -244,7 +263,9 @@ class Decorator(Generic[DecoratorInfoType]):
         func = unwrap_wrapped_function(func, unwrap_partial=False)
         if not callable(func):
             # This branch will get hit for classmethod properties
-            attribute = get_attribute_from_base_dicts(cls_, cls_var_name)  # prevents the binding call to `__get__`
+            attribute = get_attribute_from_base_dicts(
+                cls_, cls_var_name
+            )  # prevents the binding call to `__get__`
             if isinstance(attribute, PydanticDescriptorProxy):
                 func = unwrap_wrapped_function(attribute.wrapped)
         return Decorator(
@@ -324,7 +345,7 @@ def mro_for_bases(bases: tuple[type[Any], ...]) -> tuple[type[Any], ...]:
                 else:
                     break
             if not candidate:
-                raise TypeError('Inconsistent hierarchy, no C3 MRO is possible')
+                raise TypeError("Inconsistent hierarchy, no C3 MRO is possible")
             yield candidate
             for seq in non_empty:
                 # Remove candidate.
@@ -361,11 +382,11 @@ def get_attribute_from_bases(tp: type[Any] | tuple[type[Any], ...], name: str) -
         for base in mro_for_bases(tp):
             attribute = base.__dict__.get(name, _sentinel)
             if attribute is not _sentinel:
-                attribute_get = getattr(attribute, '__get__', None)
+                attribute_get = getattr(attribute, "__get__", None)
                 if attribute_get is not None:
                     return attribute_get(None, tp)
                 return attribute
-        raise AttributeError(f'{name} not found in {tp}')
+        raise AttributeError(f"{name} not found in {tp}")
     else:
         try:
             return getattr(tp, name)
@@ -402,13 +423,27 @@ class DecoratorInfos:
     not the field name!
     """
 
-    validators: dict[str, Decorator[ValidatorDecoratorInfo]] = field(default_factory=dict)
-    field_validators: dict[str, Decorator[FieldValidatorDecoratorInfo]] = field(default_factory=dict)
-    root_validators: dict[str, Decorator[RootValidatorDecoratorInfo]] = field(default_factory=dict)
-    field_serializers: dict[str, Decorator[FieldSerializerDecoratorInfo]] = field(default_factory=dict)
-    model_serializers: dict[str, Decorator[ModelSerializerDecoratorInfo]] = field(default_factory=dict)
-    model_validators: dict[str, Decorator[ModelValidatorDecoratorInfo]] = field(default_factory=dict)
-    computed_fields: dict[str, Decorator[ComputedFieldInfo]] = field(default_factory=dict)
+    validators: dict[str, Decorator[ValidatorDecoratorInfo]] = field(
+        default_factory=dict
+    )
+    field_validators: dict[str, Decorator[FieldValidatorDecoratorInfo]] = field(
+        default_factory=dict
+    )
+    root_validators: dict[str, Decorator[RootValidatorDecoratorInfo]] = field(
+        default_factory=dict
+    )
+    field_serializers: dict[str, Decorator[FieldSerializerDecoratorInfo]] = field(
+        default_factory=dict
+    )
+    model_serializers: dict[str, Decorator[ModelSerializerDecoratorInfo]] = field(
+        default_factory=dict
+    )
+    model_validators: dict[str, Decorator[ModelValidatorDecoratorInfo]] = field(
+        default_factory=dict
+    )
+    computed_fields: dict[str, Decorator[ComputedFieldInfo]] = field(
+        default_factory=dict
+    )
 
     @staticmethod
     def build(model_dc: type[Any]) -> DecoratorInfos:  # noqa: C901 (ignore complexity)
@@ -427,16 +462,50 @@ class DecoratorInfos:
         # reminder: dicts are ordered and replacement does not alter the order
         res = DecoratorInfos()
         for base in reversed(mro(model_dc)[1:]):
-            existing: DecoratorInfos | None = base.__dict__.get('__pydantic_decorators__')
+            existing: DecoratorInfos | None = base.__dict__.get(
+                "__pydantic_decorators__"
+            )
             if existing is None:
                 existing = DecoratorInfos.build(base)
-            res.validators.update({k: v.bind_to_cls(model_dc) for k, v in existing.validators.items()})
-            res.field_validators.update({k: v.bind_to_cls(model_dc) for k, v in existing.field_validators.items()})
-            res.root_validators.update({k: v.bind_to_cls(model_dc) for k, v in existing.root_validators.items()})
-            res.field_serializers.update({k: v.bind_to_cls(model_dc) for k, v in existing.field_serializers.items()})
-            res.model_serializers.update({k: v.bind_to_cls(model_dc) for k, v in existing.model_serializers.items()})
-            res.model_validators.update({k: v.bind_to_cls(model_dc) for k, v in existing.model_validators.items()})
-            res.computed_fields.update({k: v.bind_to_cls(model_dc) for k, v in existing.computed_fields.items()})
+            res.validators.update(
+                {k: v.bind_to_cls(model_dc) for k, v in existing.validators.items()}
+            )
+            res.field_validators.update(
+                {
+                    k: v.bind_to_cls(model_dc)
+                    for k, v in existing.field_validators.items()
+                }
+            )
+            res.root_validators.update(
+                {
+                    k: v.bind_to_cls(model_dc)
+                    for k, v in existing.root_validators.items()
+                }
+            )
+            res.field_serializers.update(
+                {
+                    k: v.bind_to_cls(model_dc)
+                    for k, v in existing.field_serializers.items()
+                }
+            )
+            res.model_serializers.update(
+                {
+                    k: v.bind_to_cls(model_dc)
+                    for k, v in existing.model_serializers.items()
+                }
+            )
+            res.model_validators.update(
+                {
+                    k: v.bind_to_cls(model_dc)
+                    for k, v in existing.model_validators.items()
+                }
+            )
+            res.computed_fields.update(
+                {
+                    k: v.bind_to_cls(model_dc)
+                    for k, v in existing.computed_fields.items()
+                }
+            )
 
         to_replace: list[tuple[str, Any]] = []
 
@@ -466,9 +535,9 @@ class DecoratorInfos:
                         for f in info.fields:
                             if f in field_serializer_decorator.info.fields:
                                 raise PydanticUserError(
-                                    'Multiple field serializer functions were defined '
-                                    f'for field {f!r}, this is not allowed.',
-                                    code='multiple-field-serializers',
+                                    "Multiple field serializer functions were defined "
+                                    f"for field {f!r}, this is not allowed.",
+                                    code="multiple-field-serializers",
                                 )
                     res.field_serializers[var_name] = Decorator.build(
                         model_dc, cls_var_name=var_name, shim=var_value.shim, info=info
@@ -494,7 +563,7 @@ class DecoratorInfos:
             # so then we don't need to re-process the type, which means we can discard our descriptor wrappers
             # and replace them with the thing they are wrapping (see the other setattr call below)
             # which allows validator class methods to also function as regular class methods
-            setattr(model_dc, '__pydantic_decorators__', res)
+            setattr(model_dc, "__pydantic_decorators__", res)
             for name, value in to_replace:
                 setattr(model_dc, name, value)
         return res
@@ -520,26 +589,32 @@ def inspect_validator(validator: Callable[..., Any], mode: FieldValidatorModes) 
         # e.g. `str.strip` or `datetime.datetime`
         return False
     n_positional = count_positional_params(sig)
-    if mode == 'wrap':
+    if mode == "wrap":
         if n_positional == 3:
             return True
         elif n_positional == 2:
             return False
     else:
-        assert mode in {'before', 'after', 'plain'}, f"invalid mode: {mode!r}, expected 'before', 'after' or 'plain"
+        assert mode in {
+            "before",
+            "after",
+            "plain",
+        }, f"invalid mode: {mode!r}, expected 'before', 'after' or 'plain"
         if n_positional == 2:
             return True
         elif n_positional == 1:
             return False
 
     raise PydanticUserError(
-        f'Unrecognized field_validator function signature for {validator} with `mode={mode}`:{sig}',
-        code='validator-signature',
+        f"Unrecognized field_validator function signature for {validator} with `mode={mode}`:{sig}",
+        code="validator-signature",
     )
 
 
 def inspect_field_serializer(
-    serializer: Callable[..., Any], mode: Literal['plain', 'wrap'], computed_field: bool = False
+    serializer: Callable[..., Any],
+    mode: Literal["plain", "wrap"],
+    computed_field: bool = False,
 ) -> tuple[bool, bool]:
     """Look at a field serializer function and determine if it is a field serializer,
     and whether it takes an info argument.
@@ -558,7 +633,7 @@ def inspect_field_serializer(
     sig = signature(serializer)
 
     first = next(iter(sig.parameters.values()), None)
-    is_field_serializer = first is not None and first.name == 'self'
+    is_field_serializer = first is not None and first.name == "self"
 
     n_positional = count_positional_params(sig)
     if is_field_serializer:
@@ -569,19 +644,22 @@ def inspect_field_serializer(
 
     if info_arg is None:
         raise PydanticUserError(
-            f'Unrecognized field_serializer function signature for {serializer} with `mode={mode}`:{sig}',
-            code='field-serializer-signature',
+            f"Unrecognized field_serializer function signature for {serializer} with `mode={mode}`:{sig}",
+            code="field-serializer-signature",
         )
     if info_arg and computed_field:
         raise PydanticUserError(
-            'field_serializer on computed_field does not use info signature', code='field-serializer-signature'
+            "field_serializer on computed_field does not use info signature",
+            code="field-serializer-signature",
         )
 
     else:
         return is_field_serializer, info_arg
 
 
-def inspect_annotated_serializer(serializer: Callable[..., Any], mode: Literal['plain', 'wrap']) -> bool:
+def inspect_annotated_serializer(
+    serializer: Callable[..., Any], mode: Literal["plain", "wrap"]
+) -> bool:
     """Look at a serializer function used via `Annotated` and determine whether it takes an info argument.
 
     An error is raised if the function has an invalid signature.
@@ -602,14 +680,16 @@ def inspect_annotated_serializer(serializer: Callable[..., Any], mode: Literal['
     info_arg = _serializer_info_arg(mode, count_positional_params(sig))
     if info_arg is None:
         raise PydanticUserError(
-            f'Unrecognized field_serializer function signature for {serializer} with `mode={mode}`:{sig}',
-            code='field-serializer-signature',
+            f"Unrecognized field_serializer function signature for {serializer} with `mode={mode}`:{sig}",
+            code="field-serializer-signature",
         )
     else:
         return info_arg
 
 
-def inspect_model_serializer(serializer: Callable[..., Any], mode: Literal['plain', 'wrap']) -> bool:
+def inspect_model_serializer(
+    serializer: Callable[..., Any], mode: Literal["plain", "wrap"]
+) -> bool:
     """Look at a model serializer function and determine whether it takes an info argument.
 
     An error is raised if the function has an invalid signature.
@@ -621,24 +701,29 @@ def inspect_model_serializer(serializer: Callable[..., Any], mode: Literal['plai
     Returns:
         `info_arg` - whether the function expects an info argument.
     """
-    if isinstance(serializer, (staticmethod, classmethod)) or not is_instance_method_from_sig(serializer):
+    if isinstance(
+        serializer, (staticmethod, classmethod)
+    ) or not is_instance_method_from_sig(serializer):
         raise PydanticUserError(
-            '`@model_serializer` must be applied to instance methods', code='model-serializer-instance-method'
+            "`@model_serializer` must be applied to instance methods",
+            code="model-serializer-instance-method",
         )
 
     sig = signature(serializer)
     info_arg = _serializer_info_arg(mode, count_positional_params(sig))
     if info_arg is None:
         raise PydanticUserError(
-            f'Unrecognized model_serializer function signature for {serializer} with `mode={mode}`:{sig}',
-            code='model-serializer-signature',
+            f"Unrecognized model_serializer function signature for {serializer} with `mode={mode}`:{sig}",
+            code="model-serializer-signature",
         )
     else:
         return info_arg
 
 
-def _serializer_info_arg(mode: Literal['plain', 'wrap'], n_positional: int) -> bool | None:
-    if mode == 'plain':
+def _serializer_info_arg(
+    mode: Literal["plain", "wrap"], n_positional: int
+) -> bool | None:
+    if mode == "plain":
         if n_positional == 1:
             # (input_value: Any, /) -> Any
             return False
@@ -646,7 +731,7 @@ def _serializer_info_arg(mode: Literal['plain', 'wrap'], n_positional: int) -> b
             # (model: Any, input_value: Any, /) -> Any
             return True
     else:
-        assert mode == 'wrap', f"invalid mode: {mode!r}, expected 'plain' or 'wrap'"
+        assert mode == "wrap", f"invalid mode: {mode!r}, expected 'plain' or 'wrap'"
         if n_positional == 2:
             # (input_value: Any, serializer: SerializerFunctionWrapHandler, /) -> Any
             return False
@@ -657,9 +742,7 @@ def _serializer_info_arg(mode: Literal['plain', 'wrap'], n_positional: int) -> b
     return None
 
 
-AnyDecoratorCallable: TypeAlias = (
-    'Union[classmethod[Any, Any, Any], staticmethod[Any, Any], partialmethod[Any], Callable[..., Any]]'
-)
+AnyDecoratorCallable: TypeAlias = "Union[classmethod[Any, Any, Any], staticmethod[Any, Any], partialmethod[Any], Callable[..., Any]]"
 
 
 def is_instance_method_from_sig(function: AnyDecoratorCallable) -> bool:
@@ -676,7 +759,7 @@ def is_instance_method_from_sig(function: AnyDecoratorCallable) -> bool:
     """
     sig = signature(unwrap_wrapped_function(function))
     first = next(iter(sig.parameters.values()), None)
-    if first and first.name == 'self':
+    if first and first.name == "self":
         return True
     return False
 
@@ -700,7 +783,7 @@ def ensure_classmethod_based_on_signature(function: AnyDecoratorCallable) -> Any
 def _is_classmethod_from_sig(function: AnyDecoratorCallable) -> bool:
     sig = signature(unwrap_wrapped_function(function))
     first = next(iter(sig.parameters.values()), None)
-    if first and first.name == 'cls':
+    if first and first.name == "cls":
         return True
     return False
 
@@ -717,32 +800,29 @@ def unwrap_wrapped_function(
     Args:
         func: The function to unwrap.
         unwrap_partial: If True (default), unwrap partial and partialmethod decorators, otherwise don't.
-            decorators.
         unwrap_class_static_method: If True (default), also unwrap classmethod and staticmethod
-            decorators. If False, only unwrap partial and partialmethod decorators.
+                                    decorators. If False, only unwrap partial and partialmethod decorators.
 
     Returns:
         The underlying function of the wrapped function.
     """
-    all: set[Any] = {property, cached_property}
+    unwrap_types = (property, cached_property)
 
     if unwrap_partial:
-        all.update({partial, partialmethod})
+        unwrap_types += (partial, partialmethod)
 
     if unwrap_class_static_method:
-        all.update({staticmethod, classmethod})
+        unwrap_types += (staticmethod, classmethod)
 
-    while isinstance(func, tuple(all)):
+    while isinstance(func, unwrap_types):
         if unwrap_class_static_method and isinstance(func, (classmethod, staticmethod)):
             func = func.__func__
-        elif isinstance(func, (partial, partialmethod)):
+        elif unwrap_partial and isinstance(func, (partial, partialmethod)):
             func = func.func
         elif isinstance(func, property):
-            func = func.fget  # arbitrary choice, convenient for computed fields
-        else:
-            # Make coverage happy as it can only get here in the last possible case
-            assert isinstance(func, cached_property)
-            func = func.func  # type: ignore
+            func = func.fget
+        elif isinstance(func, cached_property):
+            func = func.func
 
     return func
 
@@ -766,9 +846,11 @@ def get_function_return_type(
     if explicit_return_type is PydanticUndefined:
         # try to get it from the type annotation
         hints = get_function_type_hints(
-            unwrap_wrapped_function(func), include_keys={'return'}, types_namespace=types_namespace
+            unwrap_wrapped_function(func),
+            include_keys={"return"},
+            types_namespace=types_namespace,
         )
-        return hints.get('return', PydanticUndefined)
+        return hints.get("return", PydanticUndefined)
     else:
         return explicit_return_type
 
