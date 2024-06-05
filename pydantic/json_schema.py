@@ -2306,10 +2306,14 @@ def _deduplicate_schemas(schemas: Iterable[JsonDict]) -> list[JsonDict]:
 
 def _make_json_hashable(value: JsonValue) -> _HashableJsonValue:
     if isinstance(value, dict):
-        return tuple(sorted((k, _make_json_hashable(v)) for k, v in value.items()))
+        # Pre-allocate list size to avoid dynamic resizing
+        items = [(k, _make_json_hashable(v)) for k, v in value.items()]
+        items.sort()  # Sort only after all transformations
+        return tuple(items)
     elif isinstance(value, list):
-        return tuple(_make_json_hashable(v) for v in value)
+        return tuple(map(_make_json_hashable, value))
     else:
+        # Directly return the value for primitive types
         return value
 
 
