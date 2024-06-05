@@ -376,8 +376,6 @@ class GenerateSchema:
         """Generate a CoreSchema for `str`"""
         return core_schema.str_schema()
 
-    # the following methods can be overridden but should be considered
-    # unstable / private APIs
     def _list_schema(self, tp: Any, items_type: Any) -> CoreSchema:
         return core_schema.list_schema(self.generate_schema(items_type))
 
@@ -495,22 +493,18 @@ class GenerateSchema:
         schema: CoreSchema | None = None
 
         if from_dunder_get_core_schema:
-            from_property = self._generate_schema_from_property(obj, obj)
-            if from_property is not None:
-                schema = from_property
+            schema = self._generate_schema_from_property(obj, obj)
 
-        if schema is None:
+        if not schema:
             schema = self._generate_schema_inner(obj)
 
         metadata_js_function = _extract_get_pydantic_json_schema(obj, schema)
-        if metadata_js_function is not None:
+        if metadata_js_function:
             metadata_schema = resolve_original_schema(schema, self.defs.definitions)
             if metadata_schema:
                 self._add_js_function(metadata_schema, metadata_js_function)
 
-        schema = _add_custom_serialization_from_json_encoders(self._config_wrapper.json_encoders, obj, schema)
-
-        return schema
+        return _add_custom_serialization_from_json_encoders(self._config_wrapper.json_encoders, obj, schema)
 
     def _model_schema(self, cls: type[BaseModel]) -> core_schema.CoreSchema:
         """Generate schema for a Pydantic model."""
@@ -2013,6 +2007,52 @@ class GenerateSchema:
         if ref:
             schema['ref'] = ref  # type: ignore
         return schema
+
+    def generate_schema(
+        self,
+        obj: Any,
+        from_dunder_get_core_schema: bool = True,
+    ) -> core_schema.CoreSchema:
+        """Generate core schema.
+
+        Args:
+            obj: The object to generate core schema for.
+            from_dunder_get_core_schema: Whether to generate schema from either the
+                `__get_pydantic_core_schema__` function or `__pydantic_core_schema__` property.
+
+        Returns:
+            The generated core schema.
+
+        Raises:
+            PydanticUndefinedAnnotation:
+                If it is not possible to evaluate forward reference.
+            PydanticSchemaGenerationError:
+                If it is not possible to generate pydantic-core schema.
+            TypeError:
+                - If `alias_generator` returns a disallowed type (must be str, AliasPath or AliasChoices).
+                - If V1 style validator with `each_item=True` applied on a wrong field.
+            PydanticUserError:
+                - If `typing.TypedDict` is used instead of `typing_extensions.TypedDict` on Python < 3.12.
+                - If `__modify_schema__` method is used instead of `__get_pydantic_json_schema__`.
+        """
+        schema: CoreSchema | None = None
+
+        if from_dunder_get_core_schema:
+            schema = self._generate_schema_from_property(obj, obj)
+
+        if not schema:
+            schema = self._generate_schema_inner(obj)
+
+        metadata_js_function = _extract_get_pydantic_json_schema(obj, schema)
+        if metadata_js_function:
+            metadata_schema = resolve_original_schema(schema, self.defs.definitions)
+            if metadata_schema:
+                self._add_js_function(metadata_schema, metadata_js_function)
+
+        return _add_custom_serialization_from_json_encoders(self._config_wrapper.json_encoders, obj, schema)
+
+    def _list_schema(self, tp: Any, items_type: Any) -> CoreSchema:
+        return core_schema.list_schema(self.generate_schema(items_type))
 
 
 _VALIDATOR_F_MATCH: Mapping[
