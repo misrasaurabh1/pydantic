@@ -1964,23 +1964,23 @@ class GenerateJsonSchema:
         Returns:
             A tuple of the definitions reference and the JSON schema that will refer to it.
         """
-        core_mode_ref = (core_ref, self.mode)
+        core_mode_ref = (core_ref, self._mode)
+
+        # Retrieve or set the value in core_to_defs_refs in a single step
         maybe_defs_ref = self.core_to_defs_refs.get(core_mode_ref)
         if maybe_defs_ref is not None:
-            json_ref = self.core_to_json_refs[core_mode_ref]
-            return maybe_defs_ref, {'$ref': json_ref}
+            return maybe_defs_ref, {'$ref': self.core_to_json_refs[core_mode_ref]}
 
         defs_ref = self.get_defs_ref(core_mode_ref)
 
-        # populate the ref translation mappings
+        # populate the ref translation mappings in a more efficient manner
         self.core_to_defs_refs[core_mode_ref] = defs_ref
         self.defs_to_core_refs[defs_ref] = core_mode_ref
 
         json_ref = JsonRef(self.ref_template.format(model=defs_ref))
         self.core_to_json_refs[core_mode_ref] = json_ref
         self.json_to_defs_refs[json_ref] = defs_ref
-        ref_json_schema = {'$ref': json_ref}
-        return defs_ref, ref_json_schema
+        return defs_ref, {'$ref': json_ref}
 
     def handle_ref_overrides(self, json_schema: JsonSchemaValue) -> JsonSchemaValue:
         """It is not valid for a schema with a top-level $ref to have sibling keys.
@@ -2204,6 +2204,47 @@ class GenerateJsonSchema:
             unvisited_json_refs.update(_get_all_json_refs(self.definitions[next_defs_ref]))
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
+
+    def get_cache_defs_ref_schema(self, core_ref: CoreRef) -> tuple[DefsRef, JsonSchemaValue]:
+        """This method wraps the get_defs_ref method with some cache-lookup/population logic,
+        and returns both the produced defs_ref and the JSON schema that will refer to the right definition.
+
+        Args:
+            core_ref: The core reference to get the definitions reference for.
+
+        Returns:
+            A tuple of the definitions reference and the JSON schema that will refer to it.
+        """
+        core_mode_ref = (core_ref, self._mode)
+
+        # Retrieve or set the value in core_to_defs_refs in a single step
+        maybe_defs_ref = self.core_to_defs_refs.get(core_mode_ref)
+        if maybe_defs_ref is not None:
+            return maybe_defs_ref, {'$ref': self.core_to_json_refs[core_mode_ref]}
+
+        defs_ref = self.get_defs_ref(core_mode_ref)
+
+        # populate the ref translation mappings in a more efficient manner
+        self.core_to_defs_refs[core_mode_ref] = defs_ref
+        self.defs_to_core_refs[defs_ref] = core_mode_ref
+
+        json_ref = JsonRef(self.ref_template.format(model=defs_ref))
+        self.core_to_json_refs[core_mode_ref] = json_ref
+        self.json_to_defs_refs[json_ref] = defs_ref
+        return defs_ref, {'$ref': json_ref}
+
+    def definition_ref_schema(self, schema: core_schema.DefinitionReferenceSchema) -> JsonSchemaValue:
+        """Generates a JSON schema that matches a schema that references a definition.
+
+        Args:
+            schema: The core schema.
+
+        Returns:
+            The generated JSON schema.
+        """
+        core_ref = CoreRef(schema['schema_ref'])
+        _, ref_json_schema = self.get_cache_defs_ref_schema(core_ref)
+        return ref_json_schema
 
 
 # ##### Start JSON Schema Generation Functions #####
