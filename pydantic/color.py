@@ -1,3 +1,8 @@
+import math
+from typing import Any, Optional, Tuple, Union
+
+from pydantic_core import PydanticCustomError
+
 """Color definitions are used as per the CSS3
 [CSS Color Module Level 3](http://www.w3.org/TR/css3-color/#svg-color) specification.
 
@@ -11,12 +16,11 @@ Warning: Deprecated
     See [`pydantic-extra-types.Color`](../usage/types/extra_types/color_types.md)
     for more information.
 """
-import math
 import re
 from colorsys import hls_to_rgb, rgb_to_hls
-from typing import Any, Callable, Optional, Tuple, Type, Union, cast
+from typing import Callable, Type, cast
 
-from pydantic_core import CoreSchema, PydanticCustomError, core_schema
+from pydantic_core import CoreSchema, core_schema
 from typing_extensions import deprecated
 
 from ._internal import _repr
@@ -266,11 +270,12 @@ def parse_tuple(value: Tuple[Any, ...]) -> RGBA:
     Raises:
         PydanticCustomError: If tuple is not valid.
     """
-    if len(value) == 3:
-        r, g, b = (parse_color_value(v) for v in value)
+    len_value = len(value)
+    if len_value == 3:
+        r, g, b = map(parse_color_value, value)
         return RGBA(r, g, b, None)
-    elif len(value) == 4:
-        r, g, b = (parse_color_value(v) for v in value[:3])
+    elif len_value == 4:
+        r, g, b = map(parse_color_value, value[:3])
         return RGBA(r, g, b, parse_float_alpha(value[3]))
     else:
         raise PydanticCustomError('color_error', 'value is not a valid color: tuples must have length 3 or 4')
@@ -391,20 +396,17 @@ def parse_float_alpha(value: Union[None, str, float, int]) -> Optional[float]:
     """
     if value is None:
         return None
+
     try:
-        if isinstance(value, str) and value.endswith('%'):
-            alpha = float(value[:-1]) / 100
-        else:
-            alpha = float(value)
+        alpha = float(value[:-1]) / 100 if isinstance(value, str) and value.endswith('%') else float(value)
     except ValueError:
         raise PydanticCustomError('color_error', 'value is not a valid color: alpha values must be a valid float')
 
     if math.isclose(alpha, 1):
         return None
-    elif 0 <= alpha <= 1:
+    if 0 <= alpha <= 1:
         return alpha
-    else:
-        raise PydanticCustomError('color_error', 'value is not a valid color: alpha values must be in the range 0 to 1')
+    raise PydanticCustomError('color_error', 'value is not a valid color: alpha values must be in the range 0 to 1')
 
 
 def parse_hsl(h: str, h_units: str, sat: str, light: str, alpha: Optional[float] = None) -> RGBA:
@@ -448,6 +450,19 @@ def float_to_255(c: float) -> int:
         ValueError: If the given float value is outside the acceptable range of 0 to 1 (inclusive).
     """
     return int(round(c * 255))
+
+
+def parse_color_value(value: Any) -> float:
+    """Helper function to parse individual color value."""
+    try:
+        color_value = float(value)
+        if 0 <= color_value <= 255:
+            return color_value
+    except (TypeError, ValueError):
+        pass
+    raise PydanticCustomError(
+        'color_error', 'value is not a valid color: color values must be a valid float between 0 and 255'
+    )
 
 
 COLORS_BY_NAME = {
