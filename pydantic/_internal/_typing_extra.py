@@ -135,7 +135,7 @@ def is_new_type(type_: type[Any]) -> bool:
 
     Can't use isinstance because it fails <3.10.
     """
-    return isinstance(type_, test_new_type.__class__) and hasattr(type_, '__supertype__')  # type: ignore[arg-type]
+    return type(type_) is type(test_new_type) and hasattr(type_, '__supertype__')
 
 
 def _check_classvar(v: type[Any] | None) -> bool:
