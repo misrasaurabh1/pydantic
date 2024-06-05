@@ -88,7 +88,7 @@ def is_literal_type(type_: type[Any]) -> bool:
 
 
 def is_deprecated_instance(instance: Any) -> TypeGuard[deprecated]:
-    return isinstance(instance, DEPRECATED_TYPES)
+    return type(instance) in DEPRECATED_TYPES
 
 
 def literal_values(type_: type[Any]) -> tuple[Any, ...]:
