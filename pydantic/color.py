@@ -1,3 +1,8 @@
+import math
+from typing import Any, Optional, Tuple, Union
+
+from pydantic_core import PydanticCustomError
+
 """Color definitions are used as per the CSS3
 [CSS Color Module Level 3](http://www.w3.org/TR/css3-color/#svg-color) specification.
 
@@ -11,12 +16,11 @@ Warning: Deprecated
     See [`pydantic-extra-types.Color`](../usage/types/extra_types/color_types.md)
     for more information.
 """
-import math
 import re
 from colorsys import hls_to_rgb, rgb_to_hls
-from typing import Any, Callable, Optional, Tuple, Type, Union, cast
+from typing import Callable, Type, cast
 
-from pydantic_core import CoreSchema, PydanticCustomError, core_schema
+from pydantic_core import CoreSchema, core_schema
 from typing_extensions import deprecated
 
 from ._internal import _repr
@@ -392,14 +396,14 @@ def parse_float_alpha(value: Union[None, str, float, int]) -> Optional[float]:
     if value is None:
         return None
     try:
-        if isinstance(value, str) and value.endswith('%'):
+        if isinstance(value, str) and value[-1] == '%':
             alpha = float(value[:-1]) / 100
         else:
             alpha = float(value)
     except ValueError:
         raise PydanticCustomError('color_error', 'value is not a valid color: alpha values must be a valid float')
 
-    if math.isclose(alpha, 1):
+    if alpha == 1.0:
         return None
     elif 0 <= alpha <= 1:
         return alpha
