@@ -20,7 +20,8 @@ from typing import (
 )
 from weakref import WeakKeyDictionary, WeakValueDictionary
 
-from typing_extensions import Annotated, Literal as ExtLiteral
+from typing_extensions import Annotated
+from typing_extensions import Literal as ExtLiteral
 
 from .class_validators import gather_all_validators
 from .fields import DeferredType
@@ -185,8 +186,7 @@ class GenericModel(BaseModel):
 
     @classmethod
     def __parameterized_bases__(cls, typevars_map: Parametrization) -> Iterator[Type[Any]]:
-        """
-        Returns unbound bases of cls parameterised to given type variables
+        """Returns unbound bases of cls parameterised to given type variables
 
         :param typevars_map: Dictionary of type applications for binding subclasses.
             Given a generic class `Model` with 2 type variables [S, T]
@@ -293,7 +293,7 @@ def replace_types(type_: Any, type_map: Mapping[Any, Any]) -> Any:
         assert origin_type is not None
         # PEP-604 syntax (Ex.: list | str) is represented with a types.UnionType object that does not have __getitem__.
         # We also cannot use isinstance() since we have to compare types.
-        if sys.version_info >= (3, 10) and origin_type is types.UnionType:  # noqa: E721
+        if sys.version_info >= (3, 10) and origin_type is types.UnionType:
             return _UnionGenericAlias(origin_type, resolved_type_args)
         return origin_type[resolved_type_args]
 
@@ -357,21 +357,18 @@ def iter_contained_typevars(v: Any) -> Iterator[TypeVarType]:
 
 
 def get_caller_frame_info() -> Tuple[Optional[str], bool]:
-    """
-    Used inside a function to check whether it was called globally
+    """Used inside a function to check whether it was called globally
 
     Will only work against non-compiled code, therefore used only in pydantic.generics
 
     :returns Tuple[module_name, called_globally]
     """
     try:
-        previous_caller_frame = sys._getframe(2)
-    except ValueError as e:
-        raise RuntimeError('This function must be used inside another function') from e
-    except AttributeError:  # sys module does not have _getframe function, so there's nothing we can do about it
+        frame = sys._getframe(2)
+    except (ValueError, AttributeError):
         return None, False
-    frame_globals = previous_caller_frame.f_globals
-    return frame_globals.get('__name__'), previous_caller_frame.f_locals is frame_globals
+    frame_globals = frame.f_globals
+    return frame_globals.get('__name__'), frame.f_locals is frame_globals
 
 
 def _prepare_model_fields(
@@ -380,10 +377,7 @@ def _prepare_model_fields(
     instance_type_hints: Mapping[str, type],
     typevars_map: Mapping[Any, type],
 ) -> None:
-    """
-    Replace DeferredType fields with concrete type hints and prepare them.
-    """
-
+    """Replace DeferredType fields with concrete type hints and prepare them."""
     for key, field in created_model.__fields__.items():
         if key not in fields:
             assert field.type_.__class__ is not DeferredType
