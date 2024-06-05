@@ -2114,8 +2114,9 @@ class GenerateJsonSchema:
     def get_flattened_anyof(self, schemas: list[JsonSchemaValue]) -> JsonSchemaValue:
         members = []
         for schema in schemas:
-            if len(schema) == 1 and 'anyOf' in schema:
-                members.extend(schema['anyOf'])
+            any_of = schema.get('anyOf')
+            if any_of is not None and len(schema) == 1:
+                members.extend(any_of)
             else:
                 members.append(schema)
         members = _deduplicate_schemas(members)
@@ -2301,7 +2302,12 @@ _HashableJsonValue: TypeAlias = Union[
 
 
 def _deduplicate_schemas(schemas: Iterable[JsonDict]) -> list[JsonDict]:
-    return list({_make_json_hashable(schema): schema for schema in schemas}.values())
+    seen = {}
+    for schema in schemas:
+        hashable_schema = _make_json_hashable(schema)
+        if hashable_schema not in seen:
+            seen[hashable_schema] = schema
+    return list(seen.values())
 
 
 def _make_json_hashable(value: JsonValue) -> _HashableJsonValue:
