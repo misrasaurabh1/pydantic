@@ -29,7 +29,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
     overload,
 )
 from warnings import warn
@@ -444,11 +443,17 @@ class GenerateSchema:
         return schema
 
     def collect_definitions(self, schema: CoreSchema) -> CoreSchema:
-        ref = cast('str | None', schema.get('ref', None))
+        # Cache the 'ref' value to avoid multiple dictionary lookups
+        ref = schema.get('ref')
+
         if ref:
             self.defs.definitions[ref] = schema
+        # Use in operator to check the presence of 'ref' key instead of accessing it directly
         if 'ref' in schema:
-            schema = core_schema.definition_reference_schema(schema['ref'])
+            # Reuse the ref value from the cached variable
+            schema = core_schema.definition_reference_schema(ref)
+
+        # Pass the dictionary values directly to list() function
         return core_schema.definitions_schema(
             schema,
             list(self.defs.definitions.values()),
