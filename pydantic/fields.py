@@ -416,33 +416,15 @@ class FieldInfo(_repr.Representation):
         Returns:
             FieldInfo: A merged FieldInfo instance.
         """
-        flattened_field_infos: list[FieldInfo] = []
-        for field_info in field_infos:
-            flattened_field_infos.extend(x for x in field_info.metadata if isinstance(x, FieldInfo))
-            flattened_field_infos.append(field_info)
-        field_infos = tuple(flattened_field_infos)
-        if len(field_infos) == 1:
-            # No merging necessary, but we still need to make a copy and apply the overrides
-            field_info = copy(field_infos[0])
-            field_info._attributes_set.update(overrides)
+        if len(field_infos) == 1 and not overrides:
+            return copy(field_infos[0])
 
-            default_override = overrides.pop('default', PydanticUndefined)
-            if default_override is Ellipsis:
-                default_override = PydanticUndefined
-            if default_override is not PydanticUndefined:
-                field_info.default = default_override
-
-            for k, v in overrides.items():
-                setattr(field_info, k, v)
-            return field_info  # type: ignore
-
-        new_kwargs: dict[str, Any] = {}
+        new_kwargs = {}
         metadata = {}
         for field_info in field_infos:
             new_kwargs.update(field_info._attributes_set)
-            for x in field_info.metadata:
-                if not isinstance(x, FieldInfo):
-                    metadata[type(x)] = x
+            metadata.update({type(x): x for x in field_info.metadata if not isinstance(x, FieldInfo)})
+
         new_kwargs.update(overrides)
         field_info = FieldInfo(**new_kwargs)
         field_info.metadata = list(metadata.values())
