@@ -698,11 +698,10 @@ def ensure_classmethod_based_on_signature(function: AnyDecoratorCallable) -> Any
 
 
 def _is_classmethod_from_sig(function: AnyDecoratorCallable) -> bool:
-    sig = signature(unwrap_wrapped_function(function))
+    func = unwrap_wrapped_function(function)
+    sig = signature(func)
     first = next(iter(sig.parameters.values()), None)
-    if first and first.name == 'cls':
-        return True
-    return False
+    return first and first.name == 'cls'
 
 
 def unwrap_wrapped_function(
@@ -724,25 +723,20 @@ def unwrap_wrapped_function(
     Returns:
         The underlying function of the wrapped function.
     """
-    all: set[Any] = {property, cached_property}
+    all: tuple = (property, staticmethod, classmethod, cached_property)
 
     if unwrap_partial:
-        all.update({partial, partialmethod})
+        all += (partial, partialmethod)
 
-    if unwrap_class_static_method:
-        all.update({staticmethod, classmethod})
-
-    while isinstance(func, tuple(all)):
-        if unwrap_class_static_method and isinstance(func, (classmethod, staticmethod)):
+    while isinstance(func, all):
+        if isinstance(func, (classmethod, staticmethod)):
             func = func.__func__
         elif isinstance(func, (partial, partialmethod)):
             func = func.func
         elif isinstance(func, property):
-            func = func.fget  # arbitrary choice, convenient for computed fields
-        else:
-            # Make coverage happy as it can only get here in the last possible case
-            assert isinstance(func, cached_property)
-            func = func.func  # type: ignore
+            func = func.fget
+        elif isinstance(func, cached_property):
+            func = func.func
 
     return func
 
