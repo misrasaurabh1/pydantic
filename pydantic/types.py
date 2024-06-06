@@ -1478,6 +1478,9 @@ class _SecretBase(Generic[SecretType]):
     def _display(self) -> str | bytes:
         raise NotImplementedError
 
+    def _display(self) -> str | bytes:
+        return '**********' if self._secret_value else ''  # Direct attribute access
+
 
 class Secret(_SecretBase[SecretType]):
     """A generic base class used for defining a field with sensitive information that you do not want to be visible in logging or tracebacks.
@@ -1536,7 +1539,7 @@ class Secret(_SecretBase[SecretType]):
     """
 
     def _display(self) -> str | bytes:
-        return '**********' if self.get_secret_value() else ''
+        return '**********' if self._secret_value else ''  # Direct attribute access
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source: type[Any], handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
@@ -1583,6 +1586,14 @@ class Secret(_SecretBase[SecretType]):
                 when_used='always',
             ),
         )
+
+    def get_secret_value(self) -> SecretType:
+        """Get the secret value.
+
+        Returns:
+            The secret value.
+        """
+        return self._secret_value
 
 
 def _secret_display(value: SecretType) -> str:  # type: ignore
