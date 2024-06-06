@@ -774,11 +774,11 @@ def get_function_return_type(
 
 
 def count_positional_params(sig: Signature) -> int:
-    return sum(1 for param in sig.parameters.values() if can_be_positional(param))
+    return sum(param.kind <= Parameter.POSITIONAL_OR_KEYWORD for param in sig.parameters.values())
 
 
 def can_be_positional(param: Parameter) -> bool:
-    return param.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
+    return param.kind <= Parameter.POSITIONAL_OR_KEYWORD
 
 
 def ensure_property(f: Any) -> Any:
