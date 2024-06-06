@@ -1009,14 +1009,14 @@ class ComputedFieldInfo:
 
 def _wrapped_property_is_private(property_: cached_property | property) -> bool:  # type: ignore
     """Returns true if provided property is private, False otherwise."""
-    wrapped_name: str = ''
-
     if isinstance(property_, property):
-        wrapped_name = getattr(property_.fget, '__name__', '')
+        wrapped_name = property_.fget.__name__
     elif isinstance(property_, cached_property):  # type: ignore
-        wrapped_name = getattr(property_.func, '__name__', '')  # type: ignore
+        wrapped_name = property_.func.__name__  # type: ignore
+    else:
+        return False
 
-    return wrapped_name.startswith('_') and not wrapped_name.startswith('__')
+    return wrapped_name[0] == '_' and (len(wrapped_name) == 1 or wrapped_name[1] != '_')
 
 
 # this should really be `property[T], cached_property[T]` but property is not generic unlike cached_property
