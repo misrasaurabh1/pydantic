@@ -333,7 +333,7 @@ class TypeAdapter(Generic[T]):
         return self._is_defer_build_config(config) if config is not None else False
 
     def _model_config(self) -> ConfigDict | None:
-        type_: Any = _typing_extra.annotated_type(self._type) or self._type  # Eg FastAPI heavily uses Annotated
+        type_ = _typing_extra.annotated_type(self._type) or self._type  # Eg FastAPI heavily uses Annotated
         if _utils.lenient_issubclass(type_, BaseModel):
             return type_.model_config
         return getattr(type_, '__pydantic_config__', None)
@@ -342,7 +342,7 @@ class TypeAdapter(Generic[T]):
     def _is_defer_build_config(config: ConfigDict) -> bool:
         # TODO reevaluate this logic when we have a better understanding of how defer_build should work with TypeAdapter
         # Should we drop the special _defer_build_mode check?
-        return config.get('defer_build', False) is True and 'type_adapter' in config.get('_defer_build_mode', tuple())
+        return config.get('defer_build', False) is True and 'type_adapter' in config.get('_defer_build_mode', ())
 
     @_frame_depth(1)
     def validate_python(
@@ -598,3 +598,35 @@ class TypeAdapter(Generic[T]):
             json_schema['description'] = description
 
         return json_schemas_map, json_schema
+
+    def _model_config(self) -> ConfigDict | None:
+        type_ = _typing_extra.annotated_type(self._type) or self._type  # Eg FastAPI heavily uses Annotated
+        if _utils.lenient_issubclass(type_, BaseModel):
+            return type_.model_config
+        return getattr(type_, '__pydantic_config__', None)
+
+    @staticmethod
+    def _is_defer_build_config(config: ConfigDict) -> bool:
+        # TODO reevaluate this logic when we have a better understanding of how defer_build should work with TypeAdapter
+        # Should we drop the special _defer_build_mode check?
+        return config.get('defer_build', False) is True and 'type_adapter' in config.get('_defer_build_mode', ())
+
+    def _defer_build(self) -> bool:
+        config = self._config if self._config is not None else self._model_config()
+        return self._is_defer_build_config(config) if config is not None else False
+
+    def _model_config(self) -> ConfigDict | None:
+        type_ = _typing_extra.annotated_type(self._type) or self._type  # Eg FastAPI heavily uses Annotated
+        if _utils.lenient_issubclass(type_, BaseModel):
+            return type_.model_config
+        return getattr(type_, '__pydantic_config__', None)
+
+    def _defer_build(self) -> bool:
+        config = self._config if self._config is not None else self._model_config()
+        return self._is_defer_build_config(config) if config is not None else False
+
+    @staticmethod
+    def _is_defer_build_config(config: ConfigDict) -> bool:
+        # TODO reevaluate this logic when we have a better understanding of how defer_build should work with TypeAdapter
+        # Should we drop the special _defer_build_mode check?
+        return config.get('defer_build', False) is True and 'type_adapter' in config.get('_defer_build_mode', ())
