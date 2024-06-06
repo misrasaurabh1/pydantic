@@ -639,22 +639,10 @@ def inspect_model_serializer(serializer: Callable[..., Any], mode: Literal['plai
 
 def _serializer_info_arg(mode: Literal['plain', 'wrap'], n_positional: int) -> bool | None:
     if mode == 'plain':
-        if n_positional == 1:
-            # (input_value: Any, /) -> Any
-            return False
-        elif n_positional == 2:
-            # (model: Any, input_value: Any, /) -> Any
-            return True
+        return False if n_positional == 1 else (True if n_positional == 2 else None)
     else:
         assert mode == 'wrap', f"invalid mode: {mode!r}, expected 'plain' or 'wrap'"
-        if n_positional == 2:
-            # (input_value: Any, serializer: SerializerFunctionWrapHandler, /) -> Any
-            return False
-        elif n_positional == 3:
-            # (input_value: Any, serializer: SerializerFunctionWrapHandler, info: SerializationInfo, /) -> Any
-            return True
-
-    return None
+        return False if n_positional == 2 else (True if n_positional == 3 else None)
 
 
 AnyDecoratorCallable: TypeAlias = (
