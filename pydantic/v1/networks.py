@@ -28,7 +28,6 @@ from typing import (
 )
 
 from pydantic.v1.utils import update_not_none
-
 from . import errors
 from .utils import Representation
 from .validators import constr_length_validator, str_validator
@@ -380,41 +379,6 @@ class AnyUrl(str):
     def __repr__(self) -> str:
         extra = ', '.join(f'{n}={getattr(self, n)!r}' for n in self.__slots__ if getattr(self, n) is not None)
         return f'{self.__class__.__name__}({super().__repr__()}, {extra})'
-
-    @staticmethod
-    def get_default_parts(parts) -> Dict[str, str]:
-        return {}
-
-    @classmethod
-    def build(
-        cls,
-        *,
-        scheme: str,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        host: str,
-        port: Optional[str] = None,
-        path: Optional[str] = None,
-        query: Optional[str] = None,
-        fragment: Optional[str] = None,
-        **_kwargs: str,
-    ) -> str:
-        url = f'{scheme}://'
-        if user:
-            url += user
-            if password:
-                url += f':{password}'
-            url += '@'
-        url += host
-        if port and ('port' not in cls.hidden_parts or cls.get_default_parts(None).get('port') != port):
-            url += f':{port}'
-        if path:
-            url += path
-        if query:
-            url += f'?{query}'
-        if fragment:
-            url += f'#{fragment}'
-        return url
 
 
 class AnyHttpUrl(AnyUrl):
