@@ -235,6 +235,13 @@ def anystr_upper(v: 'StrBytes') -> 'StrBytes':
 
 
 def anystr_lower(v: 'StrBytes') -> 'StrBytes':
+    # Check if v is already lowercase to avoid calling lower() unnecessarily
+    if isinstance(v, str):
+        if v.islower():
+            return v
+    elif isinstance(v, bytes):
+        if v == v.lower():
+            return v
     return v.lower()
 
 
@@ -383,8 +390,7 @@ def ip_v6_address_validator(v: Any) -> IPv6Address:
 
 
 def ip_v4_network_validator(v: Any) -> IPv4Network:
-    """
-    Assume IPv4Network initialised with a default ``strict`` argument
+    """Assume IPv4Network initialised with a default ``strict`` argument
 
     See more:
     https://docs.python.org/library/ipaddress.html#ipaddress.IPv4Network
@@ -399,8 +405,7 @@ def ip_v4_network_validator(v: Any) -> IPv4Network:
 
 
 def ip_v6_network_validator(v: Any) -> IPv6Network:
-    """
-    Assume IPv6Network initialised with a default ``strict`` argument
+    """Assume IPv6Network initialised with a default ``strict`` argument
 
     See more:
     https://docs.python.org/library/ipaddress.html#ipaddress.IPv6Network
@@ -452,8 +457,7 @@ def path_exists_validator(v: Any) -> Path:
 
 
 def callable_validator(v: Any) -> AnyCallable:
-    """
-    Perform a simple check if the value is callable.
+    """Perform a simple check if the value is callable.
 
     Note: complete matching of argument type hints and return types is not performed
     """
@@ -617,7 +621,8 @@ def make_namedtuple_validator(
 
 
 def make_typeddict_validator(
-    typeddict_cls: Type['TypedDict'], config: Type['BaseConfig']  # type: ignore[valid-type]
+    typeddict_cls: Type['TypedDict'],
+    config: Type['BaseConfig'],  # type: ignore[valid-type]
 ) -> Callable[[Any], Dict[str, Any]]:
     from .annotated_types import create_model_from_typeddict
 
