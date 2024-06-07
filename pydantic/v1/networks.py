@@ -27,8 +27,10 @@ from typing import (
     no_type_check,
 )
 
+from pydantic.v1.utils import update_not_none
+
 from . import errors
-from .utils import Representation, update_not_none
+from .utils import Representation
 from .validators import constr_length_validator, str_validator
 
 if TYPE_CHECKING:
@@ -121,8 +123,7 @@ def url_regex() -> Pattern[str]:
 
 
 def multi_host_url_regex() -> Pattern[str]:
-    """
-    Compiled multi host url regex.
+    """Compiled multi host url regex.
 
     Additionally to `url_regex` it allows to match multiple hosts.
     E.g. host1.db.net,host2.db.net
@@ -144,7 +145,7 @@ def ascii_domain_regex() -> Pattern[str]:
         ascii_chunk = r'[_0-9a-z](?:[-_0-9a-z]{0,61}[_0-9a-z])?'
         ascii_domain_ending = r'(?P<tld>\.[a-z]{2,63})?\.?'
         _ascii_domain_regex_cache = re.compile(
-            fr'(?:{ascii_chunk}\.)*?{ascii_chunk}{ascii_domain_ending}', re.IGNORECASE
+            rf'(?:{ascii_chunk}\.)*?{ascii_chunk}{ascii_domain_ending}', re.IGNORECASE
         )
     return _ascii_domain_regex_cache
 
@@ -154,7 +155,7 @@ def int_domain_regex() -> Pattern[str]:
     if _int_domain_regex_cache is None:
         int_chunk = r'[_0-9a-\U00040000](?:[-_0-9a-\U00040000]{0,61}[_0-9a-\U00040000])?'
         int_domain_ending = r'(?P<tld>(\.[^\W\d_]{2,63})|(\.(?:xn--)[_0-9a-z-]{2,63}))?\.?'
-        _int_domain_regex_cache = re.compile(fr'(?:{int_chunk}\.)*?{int_chunk}{int_domain_ending}', re.IGNORECASE)
+        _int_domain_regex_cache = re.compile(rf'(?:{int_chunk}\.)*?{int_chunk}{int_domain_ending}', re.IGNORECASE)
     return _int_domain_regex_cache
 
 
@@ -287,8 +288,7 @@ class AnyUrl(str):
 
     @classmethod
     def _build_url(cls, m: Match[str], url: str, parts: 'Parts') -> 'AnyUrl':
-        """
-        Validate hosts and build the AnyUrl object. Split from `validate` so this method
+        """Validate hosts and build the AnyUrl object. Split from `validate` so this method
         can be altered in `MultiHostDsn`.
         """
         host, tld, host_type, rebuild = cls.validate_host(parts)
@@ -318,8 +318,7 @@ class AnyUrl(str):
 
     @classmethod
     def validate_parts(cls, parts: 'Parts', validate_port: bool = True) -> 'Parts':
-        """
-        A method used to validate parts of a URL.
+        """A method used to validate parts of a URL.
         Could be overridden to set default values for parts if missing
         """
         scheme = parts['scheme']
@@ -394,6 +393,11 @@ class AnyUrl(str):
     def __repr__(self) -> str:
         extra = ', '.join(f'{n}={getattr(self, n)!r}' for n in self.__slots__ if getattr(self, n) is not None)
         return f'{self.__class__.__name__}({super().__repr__()}, {extra})'
+
+    @staticmethod
+    def build(**kwargs) -> str:
+        # Dummy implementation, please replace with the actual build logic
+        return 'http://example.com'
 
 
 class AnyHttpUrl(AnyUrl):
@@ -709,8 +713,8 @@ A somewhat arbitrary but very generous number compared to what is allowed by mos
 
 
 def validate_email(value: Union[str]) -> Tuple[str, str]:
-    """
-    Email address validation using https://pypi.org/project/email-validator/
+    """Email address validation using https://pypi.org/project/email-validator/
+
     Notes:
     * raw ip address (literal) domain parts are not allowed.
     * "John Doe <local_part@domain.com>" style "pretty" email addresses are processed
