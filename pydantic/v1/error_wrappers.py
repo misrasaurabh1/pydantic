@@ -1,15 +1,15 @@
 import json
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Sequence, Tuple, Type, Union
 
-from .json import pydantic_encoder
-from .utils import Representation
+from pydantic.v1.json import pydantic_encoder
+from pydantic.v1.utils import Representation
 
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
 
-    from .config import BaseConfig
-    from .types import ModelOrDc
-    from .typing import ReprArgs
+    from pydantic.v1.config import BaseConfig
+    from pydantic.v1.types import ModelOrDc
+    from pydantic.v1.typing import ReprArgs
 
     Loc = Tuple[Union[int, str], ...]
 
@@ -84,7 +84,7 @@ def display_errors(errors: List['ErrorDict']) -> str:
 
 
 def _display_error_loc(error: 'ErrorDict') -> str:
-    return ' -> '.join(str(e) for e in error['loc'])
+    return ' -> '.join([str(e) for e in error['loc']])
 
 
 def _display_error_type_and_ctx(error: 'ErrorDict') -> str:
