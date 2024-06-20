@@ -18,9 +18,9 @@ from .fields import Field, FieldInfo, PrivateAttr
 if TYPE_CHECKING:
     from ._internal._dataclasses import PydanticDataclass
 
-__all__ = 'dataclass', 'rebuild_dataclass'
+__all__ = "dataclass", "rebuild_dataclass"
 
-_T = TypeVar('_T')
+_T = TypeVar("_T")
 
 if sys.version_info >= (3, 10):
 
@@ -139,8 +139,10 @@ def dataclass(  # noqa: C901
     Raises:
         AssertionError: Raised if `init` is not `False` or `validate_on_init` is `False`.
     """
-    assert init is False, 'pydantic.dataclasses.dataclass only supports init=False'
-    assert validate_on_init is not False, 'validate_on_init=False is no longer supported'
+    assert init is False, "pydantic.dataclasses.dataclass only supports init=False"
+    assert (
+        validate_on_init is not False
+    ), "validate_on_init=False is no longer supported"
 
     if sys.version_info >= (3, 10):
         kwargs = dict(kw_only=kw_only, slots=slots)
@@ -157,7 +159,7 @@ def dataclass(  # noqa: C901
         for annotation_cls in cls.__mro__:
             # In Python < 3.9, `__annotations__` might not be present if there are no fields.
             # we therefore need to use `getattr` to avoid an `AttributeError`.
-            annotations = getattr(annotation_cls, '__annotations__', [])
+            annotations = getattr(annotation_cls, "__annotations__", [])
             for field_name in annotations:
                 field_value = getattr(cls, field_name, None)
                 # Process only if this is an instance of `FieldInfo`.
@@ -165,20 +167,20 @@ def dataclass(  # noqa: C901
                     continue
 
                 # Initialize arguments for the standard `dataclasses.field`.
-                field_args: dict = {'default': field_value}
+                field_args: dict = {"default": field_value}
 
                 # Handle `kw_only` for Python 3.10+
                 if sys.version_info >= (3, 10) and field_value.kw_only:
-                    field_args['kw_only'] = True
+                    field_args["kw_only"] = True
 
                 # Set `repr` attribute if it's explicitly specified to be not `True`.
                 if field_value.repr is not True:
-                    field_args['repr'] = field_value.repr
+                    field_args["repr"] = field_value.repr
 
                 setattr(cls, field_name, dataclasses.field(**field_args))
                 # In Python 3.8, dataclasses checks cls.__dict__['__annotations__'] for annotations,
                 # so we must make sure it's initialized before we add to it.
-                if cls.__dict__.get('__annotations__') is None:
+                if cls.__dict__.get("__annotations__") is None:
                     cls.__annotations__ = {}
                 cls.__annotations__[field_name] = annotations[field_name]
 
@@ -195,8 +197,8 @@ def dataclass(  # noqa: C901
 
         if is_model_class(cls):
             raise PydanticUserError(
-                f'Cannot create a Pydantic dataclass from {cls.__name__} as it is already a Pydantic model',
-                code='dataclass-on-model',
+                f"Cannot create a Pydantic dataclass from {cls.__name__} as it is already a Pydantic model",
+                code="dataclass-on-model",
             )
 
         original_cls = cls
@@ -204,7 +206,7 @@ def dataclass(  # noqa: C901
         config_dict = config
         if config_dict is None:
             # if not explicitly provided, read from the type
-            cls_config = getattr(cls, '__pydantic_config__', None)
+            cls_config = getattr(cls, "__pydantic_config__", None)
             if cls_config is not None:
                 config_dict = cls_config
         config_wrapper = _config.ConfigWrapper(config_dict)
@@ -308,14 +310,21 @@ def rebuild_dataclass(
             types_namespace: dict[str, Any] | None = _types_namespace.copy()
         else:
             if _parent_namespace_depth > 0:
-                frame_parent_ns = _typing_extra.parent_frame_namespace(parent_depth=_parent_namespace_depth) or {}
+                frame_parent_ns = (
+                    _typing_extra.parent_frame_namespace(
+                        parent_depth=_parent_namespace_depth
+                    )
+                    or {}
+                )
                 # Note: we may need to add something similar to cls.__pydantic_parent_namespace__ from BaseModel
                 #   here when implementing handling of recursive generics. See BaseModel.model_rebuild for reference.
                 types_namespace = frame_parent_ns
             else:
                 types_namespace = {}
 
-            types_namespace = _typing_extra.get_cls_types_namespace(cls, types_namespace)
+            types_namespace = _typing_extra.get_cls_types_namespace(
+                cls, types_namespace
+            )
         return _pydantic_dataclasses.complete_dataclass(
             cls,
             _config.ConfigWrapper(cls.__pydantic_config__, check=False),
@@ -333,4 +342,9 @@ def is_pydantic_dataclass(class_: type[Any], /) -> TypeGuard[type[PydanticDatacl
     Returns:
         `True` if the class is a pydantic dataclass, `False` otherwise.
     """
-    return dataclasses.is_dataclass(class_) and '__pydantic_validator__' in class_.__dict__
+    try:
+        return "__pydantic_validator__" in class_.__dict__ and dataclasses.is_dataclass(
+            class_
+        )
+    except AttributeError:
+        return False
