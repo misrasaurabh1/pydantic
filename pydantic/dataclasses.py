@@ -141,10 +141,7 @@ def dataclass(  # noqa: C901
     assert init is False, 'pydantic.dataclasses.dataclass only supports init=False'
     assert validate_on_init is not False, 'validate_on_init=False is no longer supported'
 
-    if sys.version_info >= (3, 10):
-        kwargs = dict(kw_only=kw_only, slots=slots)
-    else:
-        kwargs = {}
+    kwargs = {'kw_only': kw_only, 'slots': slots} if sys.version_info >= (3, 10) else {}
 
     def make_pydantic_fields_compatible(cls: type[Any]) -> None:
         """Make sure that stdlib `dataclasses` understands `Field` kwargs like `kw_only`
@@ -200,12 +197,7 @@ def dataclass(  # noqa: C901
 
         original_cls = cls
 
-        config_dict = config
-        if config_dict is None:
-            # if not explicitly provided, read from the type
-            cls_config = getattr(cls, '__pydantic_config__', None)
-            if cls_config is not None:
-                config_dict = cls_config
+        config_dict = config or getattr(cls, '__pydantic_config__', None)
         config_wrapper = _config.ConfigWrapper(config_dict)
         decorators = _decorators.DecoratorInfos.build(cls)
 
@@ -252,10 +244,7 @@ def dataclass(  # noqa: C901
         cls.__pydantic_complete__ = pydantic_complete  # type: ignore
         return cls
 
-    if _cls is None:
-        return create_dataclass
-
-    return create_dataclass(_cls)
+    return create_dataclass if _cls is None else create_dataclass(_cls)
 
 
 __getattr__ = getattr_migration(__name__)
