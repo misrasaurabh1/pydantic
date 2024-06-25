@@ -66,6 +66,8 @@ def sequence_like(v: Any) -> bool:
 
 
 def lenient_isinstance(o: Any, class_or_tuple: type[Any] | tuple[type[Any], ...] | None) -> bool:  # pragma: no cover
+    if class_or_tuple is None:
+        return False
     try:
         return isinstance(o, class_or_tuple)  # type: ignore[arg-type]
     except TypeError:
