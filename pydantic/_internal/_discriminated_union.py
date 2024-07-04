@@ -303,16 +303,11 @@ class _ApplyInferredDiscriminator:
             self._set_unique_choice_for_values(choice, inferred_discriminator_values)
 
     def _is_discriminator_shared(self, choice: core_schema.TaggedUnionSchema) -> bool:
-        """This method returns a boolean indicating whether the discriminator for the `choice`
-        is the same as that being used for the outermost tagged union. This is used to
-        determine whether this TaggedUnionSchema choice should be "coalesced" into the top level,
-        or whether it should be treated as a separate (nested) choice.
-        """
+        """Returns whether the discriminator for `choice` is the same as that for the outermost tagged union."""
         inner_discriminator = choice['discriminator']
-        return inner_discriminator == self.discriminator or (
-            isinstance(inner_discriminator, list)
-            and (self.discriminator in inner_discriminator or [self.discriminator] in inner_discriminator)
-        )
+        if isinstance(inner_discriminator, list):
+            return self.discriminator in inner_discriminator or [self.discriminator] in inner_discriminator
+        return inner_discriminator == self.discriminator
 
     def _infer_discriminator_values_for_choice(  # noqa C901
         self, choice: core_schema.CoreSchema, source_name: str | None
