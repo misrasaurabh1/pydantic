@@ -615,7 +615,7 @@ class GenerateJsonSchema:
         """
         json_schema: dict[str, Any] = {'type': 'number'}
         self.update_with_validations(json_schema, schema, self.ValidationsMapping.numeric)
-        json_schema = {k: v for k, v in json_schema.items() if v not in {math.inf, -math.inf}}
+        json_schema = {k: v for k, v in json_schema.items() if v not in (math.inf, -math.inf)}
         return json_schema
 
     def decimal_schema(self, schema: core_schema.DecimalSchema) -> JsonSchemaValue:
@@ -2222,6 +2222,35 @@ class GenerateJsonSchema:
             unvisited_json_refs.update(_get_all_json_refs(self.definitions[next_defs_ref]))
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
+
+    def update_with_validations(
+        self, json_schema: JsonSchemaValue, core_schema: CoreSchema, mapping: dict[str, str]
+    ) -> None:
+        """Update the json_schema with the corresponding validations specified in the core_schema,
+        using the provided mapping to translate keys in core_schema to the appropriate keys for a JSON schema.
+
+        Args:
+            json_schema: The JSON schema to update.
+            core_schema: The core schema to get the validations from.
+            mapping: A mapping from core_schema attribute names to the corresponding JSON schema attribute names.
+        """
+        for core_key, json_schema_key in mapping.items():
+            if core_key in core_schema:
+                json_schema[json_schema_key] = core_schema[core_key]
+
+    def float_schema(self, schema: core_schema.FloatSchema) -> JsonSchemaValue:
+        """Generates a JSON schema that matches a float value.
+
+        Args:
+            schema: The core schema.
+
+        Returns:
+            The generated JSON schema.
+        """
+        json_schema: dict[str, Any] = {'type': 'number'}
+        self.update_with_validations(json_schema, schema, self.ValidationsMapping.numeric)
+        json_schema = {k: v for k, v in json_schema.items() if v not in (math.inf, -math.inf)}
+        return json_schema
 
 
 # ##### Start JSON Schema Generation Functions #####
