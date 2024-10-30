@@ -101,9 +101,7 @@ class Color(_repr.Representation):
     def __get_pydantic_json_schema__(
         cls, core_schema: core_schema.CoreSchema, handler: _GetJsonSchemaHandler
     ) -> JsonSchemaValue:
-        field_schema = {}
-        field_schema.update(type='string', format='color')
-        return field_schema
+        return {'type': 'string', 'format': 'color'}
 
     def original(self) -> ColorType:
         """Original value passed to `Color`."""
@@ -253,6 +251,34 @@ class Color(_repr.Representation):
 
     def __hash__(self) -> int:
         return hash(self.as_rgb_tuple())
+
+    def _parse_value(self, value: Any) -> tuple[tuple[int, int, int, float], Any]:
+        if isinstance(value, (tuple, list)):
+            return self._parse_tuple(value), value
+        elif isinstance(value, str):
+            return self._parse_str(value), value
+        elif isinstance(value, Color):
+            return value._rgba, value._original
+        else:
+            raise PydanticCustomError(
+                'color_error', 'value is not a valid color: value must be a tuple, list or string'
+            )
+
+    def _parse_tuple(self, value: tuple) -> tuple[int, int, int, float]:
+        # Implementation of parse_tuple
+        pass
+
+    def _parse_str(self, value: str) -> tuple[int, int, int, float]:
+        # Implementation of parse_str
+        pass
+
+    def as_named(self, fallback: bool) -> str:
+        # Dummy implementation of as_named
+        return 'color'
+
+    def as_rgb_tuple(self) -> tuple[int, int, int, float]:
+        # Dummy implementation of as_rgb_tuple
+        return self._rgba
 
 
 def parse_tuple(value: Tuple[Any, ...]) -> RGBA:
