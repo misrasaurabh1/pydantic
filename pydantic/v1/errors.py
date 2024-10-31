@@ -106,8 +106,7 @@ __all__ = (
 
 
 def cls_kwargs(cls: Type['PydanticErrorMixin'], ctx: 'DictStrAny') -> 'PydanticErrorMixin':
-    """
-    For built-in exceptions like ValueError or TypeError, we need to implement
+    """For built-in exceptions like ValueError or TypeError, we need to implement
     __reduce__ to override the default behaviour (instead of __getstate__/__setstate__)
     By default pickle protocol 2 calls `cls.__new__(cls, *args)`.
     Since we only use kwargs, we need a little constructor to change that.
