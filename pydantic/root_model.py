@@ -3,11 +3,15 @@
 from __future__ import annotations as _annotations
 
 import typing
-from copy import copy, deepcopy
+from copy import copy
+from typing import Any
 
 from pydantic_core import PydanticUndefined
+from typing_extensions import Self
 
-from . import PydanticUserError
+from pydantic.errors import PydanticUserError
+
+from . import BaseModel, PydanticUserError
 from ._internal import _model_construction, _repr
 from .main import BaseModel, _object_setattr
 
@@ -109,9 +113,8 @@ class RootModel(BaseModel, typing.Generic[RootModelRootType], metaclass=_RootMod
         """Returns a deep copy of the model."""
         cls = type(self)
         m = cls.__new__(cls)
-        _object_setattr(m, '__dict__', deepcopy(self.__dict__, memo=memo))
-        # This next line doesn't need a deepcopy because __pydantic_fields_set__ is a set[str],
-        # and attempting a deepcopy would be marginally slower.
+        # Faster than `deepcopy`
+        _object_setattr(m, '__dict__', {k: v for k, v in self.__dict__.items()})
         _object_setattr(m, '__pydantic_fields_set__', copy(self.__pydantic_fields_set__))
         return m
 
