@@ -92,21 +92,17 @@ def pydantic_encoder(obj: Any) -> Any:
     from dataclasses import asdict, is_dataclass
 
     BaseModel = import_cached_base_model()
-
     if isinstance(obj, BaseModel):
         return obj.model_dump()
     elif is_dataclass(obj):
-        return asdict(obj)  # type: ignore
-
-    # Check the class type and its superclasses for a matching encoder
+        return asdict(obj)
     for base in obj.__class__.__mro__[:-1]:
         try:
             encoder = ENCODERS_BY_TYPE[base]
         except KeyError:
             continue
         return encoder(obj)
-    else:  # We have exited the for loop without finding a suitable encoder
-        raise TypeError(f"Object of type '{obj.__class__.__name__}' is not JSON serializable")
+    raise TypeError(f"Object of type '{obj.__class__.__name__}' is not JSON serializable")
 
 
 # TODO: Add a suggested migration path once there is a way to use custom encoders
@@ -139,3 +135,11 @@ def timedelta_isoformat(td: datetime.timedelta) -> str:
     minutes, seconds = divmod(td.seconds, 60)
     hours, minutes = divmod(minutes, 60)
     return f'{"-" if td.days < 0 else ""}P{abs(td.days)}DT{hours:d}H{minutes:d}M{seconds:d}.{td.microseconds:06d}S'
+
+
+def isoformat(dt: datetime.datetime | datetime.date | datetime.time) -> str:
+    return dt.isoformat()
+
+
+def decimal_encoder(value: Decimal) -> float:
+    return float(value)
