@@ -531,21 +531,21 @@ def inspect_validator(validator: Callable[..., Any], mode: FieldValidatorModes) 
         # `inspect.signature` might not be able to infer a signature, e.g. with C objects.
         # In this case, we assume no info argument is present:
         return False
+
     n_positional = count_positional_required_params(sig)
     if mode == 'wrap':
         if n_positional == 3:
             return True
         elif n_positional == 2:
             return False
-    else:
-        assert mode in {'before', 'after', 'plain'}, f"invalid mode: {mode!r}, expected 'before', 'after' or 'plain"
+    elif mode in {'before', 'after', 'plain'}:
         if n_positional == 2:
             return True
         elif n_positional == 1:
             return False
 
     raise PydanticUserError(
-        f'Unrecognized field_validator function signature for {validator} with `mode={mode}`:{sig}',
+        f'Unrecognized field_validator function signature for {validator} with `mode={mode}`: {sig}',
         code='validator-signature',
     )
 
@@ -797,15 +797,12 @@ def count_positional_required_params(sig: Signature) -> int:
         The number of positional arguments of a signature.
     """
     parameters = list(sig.parameters.values())
-    return sum(
-        1
-        for param in parameters
-        if can_be_positional(param)
-        # First argument is the value being validated/serialized, and can have a default value
-        # (e.g. `float`, which has signature `(x=0, /)`). We assume other parameters (the info arg
-        # for instance) should be required, and thus without any default value.
-        and (param.default is Parameter.empty or param is parameters[0])
-    )
+    count = 0
+    for i, param in enumerate(parameters):
+        if can_be_positional(param):
+            if param.default is Parameter.empty or i == 0:
+                count += 1
+    return count
 
 
 def ensure_property(f: Any) -> Any:
