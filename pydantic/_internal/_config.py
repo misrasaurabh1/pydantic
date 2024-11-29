@@ -100,7 +100,7 @@ class ConfigWrapper:
     def for_model(cls, bases: tuple[type[Any], ...], namespace: dict[str, Any], kwargs: dict[str, Any]) -> Self:
         """Build a new `ConfigWrapper` instance for a `BaseModel`.
 
-        The config wrapper built based on (in descending order of priority):
+        The config wrapper is built based on:
         - options from `kwargs`
         - options from the `namespace`
         - options from the base classes (`bases`)
@@ -114,16 +114,17 @@ class ConfigWrapper:
             A `ConfigWrapper` instance for `BaseModel`.
         """
         config_new = ConfigDict()
+
         for base in bases:
-            config = getattr(base, 'model_config', None)
-            if config:
-                config_new.update(config.copy())
+            base_config = getattr(base, 'model_config', None)
+            if base_config:
+                config_new.update(base_config)
 
         config_class_from_namespace = namespace.get('Config')
         config_dict_from_namespace = namespace.get('model_config')
-
         raw_annotations = namespace.get('__annotations__', {})
-        if raw_annotations.get('model_config') and config_dict_from_namespace is None:
+
+        if 'model_config' in raw_annotations and config_dict_from_namespace is None:
             raise PydanticUserError(
                 '`model_config` cannot be used as a model field name. Use `model_config` for model configuration.',
                 code='model-config-invalid-field-name',
@@ -133,11 +134,10 @@ class ConfigWrapper:
             raise PydanticUserError('"Config" and "model_config" cannot be used together', code='config-both')
 
         config_from_namespace = config_dict_from_namespace or prepare_config(config_class_from_namespace)
-
         config_new.update(config_from_namespace)
 
-        for k in list(kwargs.keys()):
-            if k in config_keys:
+        for k in config_keys:
+            if k in kwargs:
                 config_new[k] = kwargs.pop(k)
 
         return cls(config_new)
