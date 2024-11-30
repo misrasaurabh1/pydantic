@@ -255,18 +255,17 @@ class _BaseUrl:
         Returns:
             An instance of URL
         """
-        return cls(
-            _CoreUrl.build(
-                scheme=scheme,
-                username=username,
-                password=password,
-                host=host,
-                port=port,
-                path=path,
-                query=query,
-                fragment=fragment,
-            )
+        core_url = _CoreUrl.build(
+            scheme=scheme,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            path=path,
+            query=query,
+            fragment=fragment,
         )
+        return cls(core_url)
 
     @classmethod
     def __get_pydantic_core_schema__(
