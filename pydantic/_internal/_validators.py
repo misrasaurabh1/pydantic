@@ -208,11 +208,8 @@ def ip_v6_network_validator(input_value: Any, /) -> IPv6Network:
     See more:
     https://docs.python.org/library/ipaddress.html#ipaddress.IPv6Network
     """
-    if isinstance(input_value, IPv6Network):
-        return input_value
-
     try:
-        return IPv6Network(input_value)
+        return input_value if isinstance(input_value, IPv6Network) else IPv6Network(input_value)
     except ValueError:
         raise PydanticCustomError('ip_v6_network', 'Input is not a valid IPv6 network')
 
