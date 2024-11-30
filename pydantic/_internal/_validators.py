@@ -174,7 +174,9 @@ def ip_v4_address_validator(input_value: Any, /) -> IPv4Address:
     try:
         return IPv4Address(input_value)
     except ValueError:
-        raise PydanticCustomError('ip_v4_address', 'Input is not a valid IPv4 address')
+        pass
+
+    raise PydanticCustomError('ip_v4_address', 'Input is not a valid IPv4 address')
 
 
 def ip_v6_address_validator(input_value: Any, /) -> IPv6Address:
