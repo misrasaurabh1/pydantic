@@ -409,19 +409,20 @@ class _BaseMultiHostUrl:
         Returns:
             An instance of `MultiHostUrl`
         """
-        return cls(
-            _CoreMultiHostUrl.build(
-                scheme=scheme,
-                hosts=hosts,
-                username=username,
-                password=password,
-                host=host,
-                port=port,
-                path=path,
-                query=query,
-                fragment=fragment,
-            )
+        core_url = _CoreMultiHostUrl.build(
+            scheme=scheme,
+            hosts=hosts,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            path=path,
+            query=query,
+            fragment=fragment,
         )
+        instance = cls.__new__(cls)
+        instance._url = core_url
+        return instance
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -1236,6 +1237,15 @@ def validate_email(value: str) -> tuple[str, str]:
     assert email is not None
     name = name or parts.local_part
     return name, email
+
+
+def _validate_and_get_url(cls, url):
+    if isinstance(url, cls):
+        return url._url
+    if isinstance(url, _BaseMultiHostUrl):
+        url = str(url)
+    core_url = _build_type_adapter(cls).validate_python(url)
+    return core_url._url
 
 
 __getattr__ = getattr_migration(__name__)
