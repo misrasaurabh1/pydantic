@@ -4,8 +4,12 @@ from __future__ import annotations as _annotations
 
 import typing
 from copy import copy, deepcopy
+from typing import Any
 
 from pydantic_core import PydanticUndefined
+from typing_extensions import Self
+
+from pydantic.errors import PydanticUserError
 
 from . import PydanticUserError
 from ._internal import _model_construction, _repr
@@ -110,9 +114,8 @@ class RootModel(BaseModel, typing.Generic[RootModelRootType], metaclass=_RootMod
         cls = type(self)
         m = cls.__new__(cls)
         _object_setattr(m, '__dict__', deepcopy(self.__dict__, memo=memo))
-        # This next line doesn't need a deepcopy because __pydantic_fields_set__ is a set[str],
-        # and attempting a deepcopy would be marginally slower.
-        _object_setattr(m, '__pydantic_fields_set__', copy(self.__pydantic_fields_set__))
+        # Deepcopy not necessary for sets of strings
+        _object_setattr(m, '__pydantic_fields_set__', self.__pydantic_fields_set__.copy())
         return m
 
     if typing.TYPE_CHECKING:
