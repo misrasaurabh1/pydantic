@@ -4,8 +4,12 @@ from __future__ import annotations as _annotations
 
 import typing
 from copy import copy, deepcopy
+from typing import Any
 
 from pydantic_core import PydanticUndefined
+from typing_extensions import Self
+
+from pydantic.errors import PydanticUserError
 
 from . import PydanticUserError
 from ._internal import _model_construction, _repr
@@ -101,8 +105,8 @@ class RootModel(BaseModel, typing.Generic[RootModelRootType], metaclass=_RootMod
         """Returns a shallow copy of the model."""
         cls = type(self)
         m = cls.__new__(cls)
-        _object_setattr(m, '__dict__', copy(self.__dict__))
-        _object_setattr(m, '__pydantic_fields_set__', copy(self.__pydantic_fields_set__))
+        _object_setattr(m, '__dict__', self.__dict__.copy())
+        _object_setattr(m, '__pydantic_fields_set__', self.__pydantic_fields_set__.copy())
         return m
 
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
