@@ -150,30 +150,31 @@ class ValidatedFunction:
         return self.execute(m)
 
     def build_values(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Dict[str, Any]:
-        values: Dict[str, Any] = {}
+        values = {}
+        args_len = len(args)
+
         if args:
-            arg_iter = enumerate(args)
-            while True:
-                try:
-                    i, a = next(arg_iter)
-                except StopIteration:
-                    break
+            for i in range(args_len):
                 arg_name = self.arg_mapping.get(i)
                 if arg_name is not None:
-                    values[arg_name] = a
+                    values[arg_name] = args[i]
                 else:
-                    values[self.v_args_name] = [a] + [a for _, a in arg_iter]
+                    values[self.v_args_name] = list(args[i:])
                     break
 
-        var_kwargs: Dict[str, Any] = {}
+        var_kwargs = {}
         wrong_positional_args = []
         duplicate_kwargs = []
-        fields_alias = [
+
+        non_var_fields = set(self.model.__pydantic_fields__)
+        fields_alias = {
             field.alias
             for name, field in self.model.__pydantic_fields__.items()
             if name not in (self.v_args_name, self.v_kwargs_name)
-        ]
-        non_var_fields = set(self.model.__pydantic_fields__) - {self.v_args_name, self.v_kwargs_name}
+        }
+
+        non_var_fields -= {self.v_args_name, self.v_kwargs_name}
+
         for k, v in kwargs.items():
             if k in non_var_fields or k in fields_alias:
                 if k in self.positional_only_args:
@@ -186,10 +187,13 @@ class ValidatedFunction:
 
         if var_kwargs:
             values[self.v_kwargs_name] = var_kwargs
+
         if wrong_positional_args:
             values[V_POSITIONAL_ONLY_NAME] = wrong_positional_args
+
         if duplicate_kwargs:
             values[V_DUPLICATE_KWARGS] = duplicate_kwargs
+
         return values
 
     def execute(self, m: BaseModel) -> Any:
