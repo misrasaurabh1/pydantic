@@ -60,12 +60,14 @@ def schema_of(
         category=PydanticDeprecatedSince20,
         stacklevel=2,
     )
+
     res = TypeAdapter(type_).json_schema(
         by_alias=by_alias,
         schema_generator=schema_generator,
         ref_template=ref_template,
     )
-    if title is not None:
+
+    if title:
         if isinstance(title, str):
             res['title'] = title
         else:
