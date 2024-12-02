@@ -1826,7 +1826,8 @@ class SecretStr(_SecretField[str]):
         return len(self._secret_value)
 
     def _display(self) -> str:
-        return _secret_display(self._secret_value)
+        value = self._secret_value
+        return '**********' if value else ''
 
 
 class SecretBytes(_SecretField[bytes]):
