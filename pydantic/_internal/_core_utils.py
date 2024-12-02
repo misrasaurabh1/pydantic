@@ -530,28 +530,29 @@ def simplify_schema_references(schema: core_schema.CoreSchema) -> core_schema.Co
 
 def _strip_metadata(schema: CoreSchema) -> CoreSchema:
     def strip_metadata(s: CoreSchema, recurse: Recurse) -> CoreSchema:
-        s = s.copy()
+        # Remove 'metadata' key first
         s.pop('metadata', None)
+
         if s['type'] == 'model-fields':
-            s = s.copy()
-            s['fields'] = {k: v.copy() for k, v in s['fields'].items()}
-            for field_name, field_schema in s['fields'].items():
+            fields = s['fields']
+
+            for field_name, field_schema in fields.items():
                 field_schema.pop('metadata', None)
-                s['fields'][field_name] = field_schema
-            computed_fields = s.get('computed_fields', None)
-            if computed_fields:
-                s['computed_fields'] = [cf.copy() for cf in computed_fields]
+
+            if 'computed_fields' in s:
+                computed_fields = s['computed_fields']
                 for cf in computed_fields:
                     cf.pop('metadata', None)
             else:
                 s.pop('computed_fields', None)
+
         elif s['type'] == 'model':
             # remove some defaults
-            if s.get('custom_init', True) is False:
-                s.pop('custom_init')
-            if s.get('root_model', True) is False:
-                s.pop('root_model')
-            if {'title'}.issuperset(s.get('config', {}).keys()):
+            if not s.get('custom_init', True):
+                s.pop('custom_init', None)
+            if not s.get('root_model', True):
+                s.pop('root_model', None)
+            if 'config' in s and set(s['config'].keys()) <= {'title'}:
                 s.pop('config', None)
 
         return recurse(s, strip_metadata)
