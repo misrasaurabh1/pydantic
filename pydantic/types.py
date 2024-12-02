@@ -1856,10 +1856,14 @@ class SecretBytes(_SecretField[bytes]):
     _error_kind: ClassVar[str] = 'bytes_type'
 
     def __len__(self) -> int:
-        return len(self._secret_value)
+        return self._length
 
     def _display(self) -> bytes:
         return _secret_display(self._secret_value).encode()
+
+    def __init__(self, secret_value: bytes):
+        self._secret_value = secret_value
+        self._length = len(secret_value)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PAYMENT CARD TYPES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
