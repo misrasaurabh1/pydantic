@@ -32,7 +32,7 @@ from typing import (
 from uuid import UUID
 
 import annotated_types
-from annotated_types import BaseMetadata, MaxLen, MinLen
+from annotated_types import BaseMetadata, Len, MaxLen, MinLen
 from pydantic_core import CoreSchema, PydanticCustomError, SchemaSerializer, core_schema
 from typing_extensions import Annotated, Literal, Protocol, TypeAlias, TypeAliasType, deprecated
 
@@ -844,7 +844,8 @@ def conset(
     Returns:
         The wrapped set type.
     """
-    return Annotated[Set[item_type], annotated_types.Len(min_length or 0, max_length)]  # pyright: ignore[reportReturnType]
+    min_length = 0 if min_length is None else min_length
+    return Annotated[Set[item_type], Len(min_length, max_length)]
 
 
 def confrozenset(
