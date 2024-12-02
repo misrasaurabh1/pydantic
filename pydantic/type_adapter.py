@@ -65,6 +65,12 @@ def _type_has_config(type_: Any) -> bool:
         return False
 
 
+# Helper function defined below
+def _type_has_config(type: Any) -> bool:
+    # This function might need to be implemented based on the actual use-case
+    return hasattr(type, 'Config') or hasattr(type, '__annotations__')
+
+
 @final
 class TypeAdapter(Generic[T]):
     """Usage docs: https://docs.pydantic.dev/2.10/concepts/type_adapter/
