@@ -662,9 +662,16 @@ class GenerateJsonSchema:
         Returns:
             The generated JSON schema.
         """
-        json_schema: dict[str, Any] = {'type': 'number'}
-        self.update_with_validations(json_schema, schema, self.ValidationsMapping.numeric)
-        json_schema = {k: v for k, v in json_schema.items() if v not in {math.inf, -math.inf}}
+        # Perform a single pass to generate and filter the schema
+        json_schema = {
+            'type': 'number',
+            **{
+                json_key: schema[core_key]
+                for core_key, json_key in self.ValidationsMapping.numeric.items()
+                if core_key in schema and schema[core_key] not in {math.inf, -math.inf}
+            },
+        }
+        # Return the filtered schema
         return json_schema
 
     def decimal_schema(self, schema: core_schema.DecimalSchema) -> JsonSchemaValue:
@@ -2178,9 +2185,10 @@ class GenerateJsonSchema:
             core_schema: The core schema to get the validations from.
             mapping: A mapping from core_schema attribute names to the corresponding JSON schema attribute names.
         """
-        for core_key, json_schema_key in mapping.items():
-            if core_key in core_schema:
-                json_schema[json_schema_key] = core_schema[core_key]
+        # Using a generator expression inside dict comprehension for fast membership checking
+        json_schema.update(
+            {mapping[core_key]: core_schema[core_key] for core_key in core_schema if core_key in mapping}
+        )
 
     class ValidationsMapping:
         """This class just contains mappings from core_schema attribute names to the corresponding
