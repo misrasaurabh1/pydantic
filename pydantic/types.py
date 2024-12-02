@@ -8,6 +8,7 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
 from typing import (
@@ -1525,10 +1526,7 @@ class _SecretBase(Generic[SecretType]):
 
 
 def _serialize_secret(value: Secret[SecretType], info: core_schema.SerializationInfo) -> str | Secret[SecretType]:
-    if info.mode == 'json':
-        return str(value)
-    else:
-        return value
+    return str(value) if info.mode == 'json' else value
 
 
 class Secret(_SecretBase[SecretType]):
@@ -1642,24 +1640,8 @@ class Secret(_SecretBase[SecretType]):
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source: type[Any], handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
-        inner_type = None
-        # if origin_type is Secret, then cls is a GenericAlias, and we can extract the inner type directly
-        origin_type = get_origin(source)
-        if origin_type is not None:
-            inner_type = get_args(source)[0]
-        # otherwise, we need to get the inner type from the base class
-        else:
-            bases = getattr(cls, '__orig_bases__', getattr(cls, '__bases__', []))
-            for base in bases:
-                if get_origin(base) is Secret:
-                    inner_type = get_args(base)[0]
-            if bases == [] or inner_type is None:
-                raise TypeError(
-                    f"Can't get secret type from {cls.__name__}. "
-                    'Please use Secret[<type>], or subclass from Secret[<type>] instead.'
-                )
-
-        inner_schema = handler.generate_schema(inner_type)  # type: ignore
+        inner_type = cls._get_inner_type(source)
+        inner_schema = handler.generate_schema(inner_type)
 
         def validate_secret_value(value, handler) -> Secret[SecretType]:
             if isinstance(value, Secret):
@@ -1668,15 +1650,10 @@ class Secret(_SecretBase[SecretType]):
             return cls(validated_inner)
 
         return core_schema.json_or_python_schema(
-            python_schema=core_schema.no_info_wrap_validator_function(
-                validate_secret_value,
-                inner_schema,
-            ),
+            python_schema=core_schema.no_info_wrap_validator_function(validate_secret_value, inner_schema),
             json_schema=core_schema.no_info_after_validator_function(lambda x: cls(x), inner_schema),
             serialization=core_schema.plain_serializer_function_ser_schema(
-                _serialize_secret,
-                info_arg=True,
-                when_used='always',
+                _serialize_secret, info_arg=True, when_used='always'
             ),
         )
 
@@ -1689,6 +1666,20 @@ class Secret(_SecretBase[SecretType]):
             )
         )
     )
+
+    @classmethod
+    @lru_cache(None)
+    def _get_inner_type(cls, source: type[Any]) -> Any:
+        origin_type = get_origin(source)
+        if origin_type is not None:
+            return get_args(source)[0]
+        bases = getattr(cls, '__orig_bases__', getattr(cls, '__bases__', []))
+        for base in bases:
+            if get_origin(base) is Secret:
+                return get_args(base)[0]
+        raise TypeError(
+            f"Can't get secret type from {cls.__name__}. Use Secret[<type>], or subclass from Secret[<type>] instead."
+        )
 
 
 def _secret_display(value: SecretType) -> str:  # type: ignore
