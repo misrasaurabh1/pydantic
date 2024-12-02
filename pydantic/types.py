@@ -1872,7 +1872,12 @@ class PaymentCardBrand(str, Enum):
     other = 'other'
 
     def __str__(self) -> str:
-        return self.value
+        return self._value_
+
+    def __new__(cls, value, *args, **kwargs):
+        instance = str.__new__(cls, value)
+        instance._value_ = value
+        return instance
 
 
 @deprecated(
