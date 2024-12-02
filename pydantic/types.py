@@ -1512,7 +1512,7 @@ class _SecretBase(Generic[SecretType]):
         return isinstance(other, self.__class__) and self.get_secret_value() == other.get_secret_value()
 
     def __hash__(self) -> int:
-        return hash(self.get_secret_value())
+        return hash(self._secret_value)
 
     def __str__(self) -> str:
         return str(self._display())
