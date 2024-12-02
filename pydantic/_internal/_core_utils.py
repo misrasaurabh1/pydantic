@@ -529,20 +529,14 @@ def simplify_schema_references(schema: core_schema.CoreSchema) -> core_schema.Co
 
 
 def _strip_metadata(schema: CoreSchema) -> CoreSchema:
-    def strip_metadata(s: CoreSchema, recurse: Recurse) -> CoreSchema:
-        s = s.copy()
+    def strip_metadata(s: CoreSchema) -> CoreSchema:
         s.pop('metadata', None)
         if s['type'] == 'model-fields':
-            s = s.copy()
-            s['fields'] = {k: v.copy() for k, v in s['fields'].items()}
-            for field_name, field_schema in s['fields'].items():
-                field_schema.pop('metadata', None)
-                s['fields'][field_name] = field_schema
+            fields = {k: v for k, v in s['fields'].items() if 'metadata' not in v}
+            s = {**s, 'fields': fields}
             computed_fields = s.get('computed_fields', None)
             if computed_fields:
-                s['computed_fields'] = [cf.copy() for cf in computed_fields]
-                for cf in computed_fields:
-                    cf.pop('metadata', None)
+                s['computed_fields'] = [cf for cf in computed_fields if 'metadata' not in cf]
             else:
                 s.pop('computed_fields', None)
         elif s['type'] == 'model':
@@ -554,9 +548,9 @@ def _strip_metadata(schema: CoreSchema) -> CoreSchema:
             if {'title'}.issuperset(s.get('config', {}).keys()):
                 s.pop('config', None)
 
-        return recurse(s, strip_metadata)
+        return walk_core_schema(s, strip_metadata) if s['type'] not in {'model-fields'} else s
 
-    return walk_core_schema(schema, strip_metadata)
+    return strip_metadata(schema)
 
 
 def pretty_print_core_schema(
