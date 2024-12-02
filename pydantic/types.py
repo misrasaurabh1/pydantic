@@ -2629,6 +2629,9 @@ class EncodedStr:
     def __hash__(self) -> int:
         return hash(self.encoder)
 
+    def __init__(self, encoder):
+        self.encoder = encoder
+
 
 Base64Bytes = Annotated[bytes, EncodedBytes(encoder=Base64Encoder)]
 """A bytes type that is encoded and decoded using the standard (non-URL-safe) base64 encoder.
