@@ -1158,7 +1158,7 @@ class UuidVersion:
         self, core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
     ) -> JsonSchemaValue:
         field_schema = handler(core_schema)
-        field_schema.pop('anyOf', None)  # remove the bytes/str union
+        field_schema.pop('anyOf', None)
         field_schema.update(type='string', format=f'uuid{self.uuid_version}')
         return field_schema
 
@@ -1175,6 +1175,12 @@ class UuidVersion:
 
     def __hash__(self) -> int:
         return hash(type(self.uuid_version))
+
+    def __init__(self, mode):
+        self.mode = mode
+
+    def __init__(self, uuid_version: int):
+        self.uuid_version = uuid_version
 
 
 UUID1 = Annotated[UUID, UuidVersion(1)]
@@ -3116,6 +3122,11 @@ def _get_type_name(x: Any) -> str:
 
     # Fail by returning the type's actual name
     return getattr(type_, '__name__', '<no type name>')
+
+
+def _check_annotated_type(actual_type: str, expected_type: str, class_name: str):
+    if actual_type != expected_type:
+        raise TypeError(f"{class_name} expected a type of '{expected_type}', got '{actual_type}'")
 
 
 class _AllowAnyJson:
