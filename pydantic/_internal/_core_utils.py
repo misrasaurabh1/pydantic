@@ -181,12 +181,10 @@ class _WalkCoreSchema:
         return schema.copy() if self._copy else schema  # pyright: ignore[reportAttributeAccessIssue]
 
     def _build_schema_type_to_method(self) -> dict[core_schema.CoreSchemaType, Recurse]:
-        mapping: dict[core_schema.CoreSchemaType, Recurse] = {}
-        key: core_schema.CoreSchemaType
-        for key in get_args(core_schema.CoreSchemaType):
-            method_name = f"handle_{key.replace('-', '_')}_schema"
-            mapping[key] = getattr(self, method_name, self._handle_other_schemas)
-        return mapping
+        return {
+            key: getattr(self, f"handle_{key.replace('-', '_')}_schema", self._handle_other_schemas)
+            for key in get_args(core_schema.CoreSchemaType)
+        }
 
     def walk(self, schema: core_schema.CoreSchema, f: Walk) -> core_schema.CoreSchema:
         return f(schema, self._walk)
