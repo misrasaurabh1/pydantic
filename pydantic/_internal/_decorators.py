@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterable, Ty
 from pydantic_core import PydanticUndefined, core_schema
 from typing_extensions import Literal, TypeAlias, is_typeddict
 
+from pydantic.fields import ComputedFieldInfo as PydanticComputedFieldInfo
+
 from ..errors import PydanticUserError
 from ._core_utils import get_type_ref
 from ._internal_dataclass import slots_true
@@ -184,12 +186,8 @@ class PydanticDescriptorProxy(Generic[ReturnType]):
 
     def _call_wrapped_attr(self, func: Callable[[Any], None], *, name: str) -> PydanticDescriptorProxy[ReturnType]:
         self.wrapped = getattr(self.wrapped, name)(func)
-        if isinstance(self.wrapped, property):
-            # update ComputedFieldInfo.wrapped_property
-            from ..fields import ComputedFieldInfo
-
-            if isinstance(self.decorator_info, ComputedFieldInfo):
-                self.decorator_info.wrapped_property = self.wrapped
+        if isinstance(self.wrapped, property) and isinstance(self.decorator_info, PydanticComputedFieldInfo):
+            self.decorator_info.wrapped_property = self.wrapped
         return self
 
     def __get__(self, obj: object | None, obj_type: type[object] | None = None) -> PydanticDescriptorProxy[ReturnType]:
