@@ -2318,6 +2318,20 @@ class GenerateJsonSchema:
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
 
+    def build_schema_type_to_method(self):
+        # Presumably this method dynamically builds a mapping dictionary
+        # We will cache it as a class-level attribute if not already done
+        if not hasattr(self.__class__, '_schema_type_to_method_cache'):
+            self.__class__._schema_type_to_method_cache = {
+                # Assuming we map certain schema types to their handlers here
+                'none': self.none_schema,
+                # Example placeholders, add other schema type methods as needed
+                # 'string': self.string_schema,
+                # 'integer': self.integer_schema,
+                # Add other mappings...
+            }
+        return self.__class__._schema_type_to_method_cache
+
 
 # ##### Start JSON Schema Generation Functions #####
 
