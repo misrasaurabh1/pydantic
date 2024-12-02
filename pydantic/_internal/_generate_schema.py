@@ -54,6 +54,7 @@ from pydantic_core import (
     to_jsonable_python,
 )
 from typing_extensions import Literal, TypeAliasType, TypedDict, get_args, get_origin, is_typeddict
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..aliases import AliasChoices, AliasGenerator, AliasPath
 from ..annotated_handlers import GetCoreSchemaHandler, GetJsonSchemaHandler
@@ -1593,12 +1594,6 @@ class GenerateSchema:
 
     def _zoneinfo_schema(self) -> core_schema.CoreSchema:
         """Generate schema for a zone_info.ZoneInfo object"""
-        # we're def >=py3.9 if ZoneInfo was included in input
-        if sys.version_info < (3, 9):
-            assert False, 'Unreachable'
-
-        # import in this path is safe
-        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
         def validate_str_is_valid_iana_tz(value: Any, /) -> ZoneInfo:
             if isinstance(value, ZoneInfo):
