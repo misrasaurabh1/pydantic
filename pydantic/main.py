@@ -28,8 +28,10 @@ from typing import (
 
 import pydantic_core
 import typing_extensions
-from pydantic_core import PydanticUndefined
+from pydantic_core import CoreSchema, PydanticUndefined
 from typing_extensions import Self, TypeAlias, Unpack
+
+from pydantic.fields import FieldInfo
 
 from ._internal import (
     _config,
@@ -1014,13 +1016,13 @@ class BaseModel(metaclass=_model_construction.ModelMetaclass):
 
     def __getstate__(self) -> dict[Any, Any]:
         private = self.__pydantic_private__
-        if private:
-            private = {k: v for k, v in private.items() if v is not PydanticUndefined}
         return {
             '__dict__': self.__dict__,
             '__pydantic_extra__': self.__pydantic_extra__,
             '__pydantic_fields_set__': self.__pydantic_fields_set__,
-            '__pydantic_private__': private,
+            '__pydantic_private__': {k: v for k, v in private.items() if v is not PydanticUndefined}
+            if private
+            else None,
         }
 
     def __setstate__(self, state: dict[Any, Any]) -> None:
