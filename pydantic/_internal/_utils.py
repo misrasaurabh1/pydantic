@@ -3,6 +3,7 @@
 This should be reduced as much as possible with functions only used in one place, moved to that place.
 """
 
+from __future__ import annotations
 from __future__ import annotations as _annotations
 
 import dataclasses
@@ -96,11 +97,11 @@ def lenient_isinstance(o: Any, class_or_tuple: type[Any] | tuple[type[Any], ...]
 
 def lenient_issubclass(cls: Any, class_or_tuple: Any) -> bool:  # pragma: no cover
     try:
+        # Check if cls is actually a subclass of class_or_tuple
         return isinstance(cls, type) and issubclass(cls, class_or_tuple)
     except TypeError:
-        if isinstance(cls, _typing_extra.WithArgsTypes):
-            return False
-        raise  # pragma: no cover
+        # Check for the specific case of _typing_extra.WithArgsTypes
+        return isinstance(cls, _typing_extra.WithArgsTypes)
 
 
 def is_model_class(cls: Any) -> TypeGuard[type[BaseModel]]:
