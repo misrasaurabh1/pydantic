@@ -117,7 +117,9 @@ def is_valid_identifier(identifier: str) -> bool:
     :param identifier: The identifier to test.
     :return: True if the identifier is valid.
     """
-    return identifier.isidentifier() and not keyword.iskeyword(identifier)
+    if not identifier.isidentifier():
+        return False
+    return not keyword.iskeyword(identifier)
 
 
 KeyType = TypeVar('KeyType')
