@@ -18,7 +18,6 @@ import os
 import re
 import warnings
 from collections import defaultdict
-from copy import deepcopy
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -144,38 +143,27 @@ class _DefinitionsRemapping:
         This function should produce a remapping that replaces complex DefsRef with the simpler ones from the
         prioritized_choices such that applying the name remapping would result in an equivalent JSON schema.
         """
-        # We need to iteratively simplify the definitions until we reach a fixed point.
-        # The reason for this is that outer definitions may reference inner definitions that get simplified
-        # into an equivalent reference, and the outer definitions won't be equivalent until we've simplified
-        # the inner definitions.
-        copied_definitions = deepcopy(definitions)
+        copied_definitions = definitions.copy()
         definitions_schema = {'$defs': copied_definitions}
-        for _iter in range(100):  # prevent an infinite loop in the case of a bug, 100 iterations should be enough
-            # For every possible remapped DefsRef, collect all schemas that that DefsRef might be used for:
+        for _ in range(100):  # prevent an infinite loop in the case of a bug, 100 iterations should be enough
             schemas_for_alternatives: dict[DefsRef, list[JsonSchemaValue]] = defaultdict(list)
-            for defs_ref in copied_definitions:
-                alternatives = prioritized_choices[defs_ref]
-                for alternative in alternatives:
-                    schemas_for_alternatives[alternative].append(copied_definitions[defs_ref])
+            for defs_ref, schema in copied_definitions.items():
+                for alternative in prioritized_choices[defs_ref]:
+                    schemas_for_alternatives[alternative].append(schema)
 
-            # Deduplicate the schemas for each alternative; the idea is that we only want to remap to a new DefsRef
-            # if it introduces no ambiguity, i.e., there is only one distinct schema for that DefsRef.
             for defs_ref in schemas_for_alternatives:
                 schemas_for_alternatives[defs_ref] = _deduplicate_schemas(schemas_for_alternatives[defs_ref])
 
-            # Build the remapping
             defs_remapping: dict[DefsRef, DefsRef] = {}
             json_remapping: dict[JsonRef, JsonRef] = {}
-            for original_defs_ref in definitions:
-                alternatives = prioritized_choices[original_defs_ref]
-                # Pick the first alternative that has only one schema, since that means there is no collision
+            for original_defs_ref, alternatives in prioritized_choices.items():
                 remapped_defs_ref = next(x for x in alternatives if len(schemas_for_alternatives[x]) == 1)
                 defs_remapping[original_defs_ref] = remapped_defs_ref
                 json_remapping[defs_to_json[original_defs_ref]] = defs_to_json[remapped_defs_ref]
+
             remapping = _DefinitionsRemapping(defs_remapping, json_remapping)
-            new_definitions_schema = remapping.remap_json_schema({'$defs': copied_definitions})
+            new_definitions_schema = remapping.remap_json_schema(definitions_schema)
             if definitions_schema == new_definitions_schema:
-                # We've reached the fixed point
                 return remapping
             definitions_schema = new_definitions_schema
 
