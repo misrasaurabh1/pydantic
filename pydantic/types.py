@@ -1859,7 +1859,10 @@ class SecretBytes(_SecretField[bytes]):
         return len(self._secret_value)
 
     def _display(self) -> bytes:
-        return _secret_display(self._secret_value).encode()
+        return b'**********' if self._secret_value else b''
+
+    def __init__(self, secret_value: bytes):
+        self._secret_value = secret_value
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PAYMENT CARD TYPES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
