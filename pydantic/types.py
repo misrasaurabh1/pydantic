@@ -1952,27 +1952,25 @@ class PaymentCardNumber(str):
         """Validate length based on BIN for major brands:
         https://en.wikipedia.org/wiki/Payment_card_number#Issuer_identification_number_(IIN).
         """
-        if card_number[0] == '4':
+        first_digit = card_number[0]
+        first_two_digits = card_number[:2]
+
+        if first_digit == '4':
             brand = PaymentCardBrand.visa
-        elif 51 <= int(card_number[:2]) <= 55:
+            valid = len(card_number) in {13, 16, 19}
+            required_length = '13, 16 or 19'
+        elif '51' <= first_two_digits <= '55':
             brand = PaymentCardBrand.mastercard
-        elif card_number[:2] in {'34', '37'}:
+            valid = len(card_number) == 16
+            required_length = 16
+        elif first_two_digits in {'34', '37'}:
             brand = PaymentCardBrand.amex
+            valid = len(card_number) == 15
+            required_length = 15
         else:
             brand = PaymentCardBrand.other
-
-        required_length: None | int | str = None
-        if brand in PaymentCardBrand.mastercard:
-            required_length = 16
-            valid = len(card_number) == required_length
-        elif brand == PaymentCardBrand.visa:
-            required_length = '13, 16 or 19'
-            valid = len(card_number) in {13, 16, 19}
-        elif brand == PaymentCardBrand.amex:
-            required_length = 15
-            valid = len(card_number) == required_length
-        else:
             valid = True
+            required_length = None
 
         if not valid:
             raise PydanticCustomError(
@@ -1980,6 +1978,7 @@ class PaymentCardNumber(str):
                 'Length for a {brand} card must be {required_length}',
                 {'brand': brand, 'required_length': required_length},
             )
+
         return brand
 
 
