@@ -932,27 +932,25 @@ class GenerateJsonSchema:
             The generated JSON schema.
         """
         json_schema: JsonSchemaValue = {'type': 'array'}
+
         if 'variadic_item_index' in schema:
             variadic_item_index = schema['variadic_item_index']
-            if variadic_item_index > 0:
-                json_schema['minItems'] = variadic_item_index
-                json_schema['prefixItems'] = [
-                    self.generate_inner(item) for item in schema['items_schema'][:variadic_item_index]
-                ]
+            json_schema['minItems'] = variadic_item_index
+            prefix_items = [self.generate_inner(item) for item in schema['items_schema'][:variadic_item_index]]
+            json_schema['prefixItems'] = prefix_items
+
             if variadic_item_index + 1 == len(schema['items_schema']):
-                # if the variadic item is the last item, then represent it faithfully
                 json_schema['items'] = self.generate_inner(schema['items_schema'][variadic_item_index])
             else:
-                # otherwise, 'items' represents the schema for the variadic
-                # item plus the suffix, so just allow anything for simplicity
-                # for now
                 json_schema['items'] = True
         else:
-            prefixItems = [self.generate_inner(item) for item in schema['items_schema']]
-            if prefixItems:
-                json_schema['prefixItems'] = prefixItems
-            json_schema['minItems'] = len(prefixItems)
-            json_schema['maxItems'] = len(prefixItems)
+            prefix_items = [self.generate_inner(item) for item in schema['items_schema']]
+            if prefix_items:
+                json_schema['prefixItems'] = prefix_items
+            prefix_len = len(prefix_items)
+            json_schema['minItems'] = prefix_len
+            json_schema['maxItems'] = prefix_len
+
         self.update_with_validations(json_schema, schema, self.ValidationsMapping.array)
         return json_schema
 
