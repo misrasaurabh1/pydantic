@@ -674,3 +674,20 @@ class TypeAdapter(Generic[T]):
             json_schema['description'] = description
 
         return json_schemas_map, json_schema
+
+    def _fetch_parent_frame(self):
+        import inspect
+
+        try:
+            return inspect.currentframe().f_back.f_back
+        except AttributeError:
+            return None
+
+    def _get_namespaces(self, parent_frame):
+        if parent_frame is not None:
+            globalns = parent_frame.f_globals
+            localns = parent_frame.f_locals if parent_frame.f_locals is not globalns else {}
+        else:
+            globalns = {}
+            localns = {}
+        return globalns, localns
