@@ -5,7 +5,6 @@ Import of this module is deferred since it contains imports of many standard lib
 
 from __future__ import annotations as _annotations
 
-import math
 import re
 import typing
 from decimal import Decimal
@@ -213,7 +212,7 @@ def ip_v6_network_validator(input_value: Any, /) -> IPv6Network:
 
     try:
         return IPv6Network(input_value)
-    except ValueError:
+    except (ValueError, TypeError):
         raise PydanticCustomError('ip_v6_network', 'Input is not a valid IPv6 network')
 
 
@@ -248,7 +247,7 @@ def fraction_validator(input_value: Any, /) -> Fraction:
 
 
 def forbid_inf_nan_check(x: Any) -> Any:
-    if not math.isfinite(x):
+    if isinstance(x, (int, float)) and not (-float('inf') < x < float('inf')):
         raise PydanticKnownError('finite_number')
     return x
 
