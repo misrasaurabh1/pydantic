@@ -124,14 +124,13 @@ KeyType = TypeVar('KeyType')
 
 
 def deep_update(mapping: dict[KeyType, Any], *updating_mappings: dict[KeyType, Any]) -> dict[KeyType, Any]:
-    updated_mapping = mapping.copy()
     for updating_mapping in updating_mappings:
         for k, v in updating_mapping.items():
-            if k in updated_mapping and isinstance(updated_mapping[k], dict) and isinstance(v, dict):
-                updated_mapping[k] = deep_update(updated_mapping[k], v)
+            if k in mapping and isinstance(mapping[k], dict) and isinstance(v, dict):
+                deep_update(mapping[k], v)
             else:
-                updated_mapping[k] = v
-    return updated_mapping
+                mapping[k] = v
+    return mapping
 
 
 def update_not_none(mapping: dict[Any, Any], **update: Any) -> None:
