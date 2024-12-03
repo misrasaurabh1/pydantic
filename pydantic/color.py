@@ -366,16 +366,16 @@ def parse_color_value(value: Union[int, str], max_val: int = 255) -> float:
     """
     try:
         color = float(value)
-    except ValueError:
-        raise PydanticCustomError('color_error', 'value is not a valid color: color values must be a valid number')
-    if 0 <= color <= max_val:
-        return color / max_val
-    else:
-        raise PydanticCustomError(
-            'color_error',
-            'value is not a valid color: color values must be in the range 0 to {max_val}',
-            {'max_val': max_val},
-        )
+        if 0 <= color <= max_val:
+            return color / max_val
+    except (ValueError, TypeError):
+        pass
+
+    raise PydanticCustomError(
+        'color_error',
+        'value is not a valid color: color values must be a valid number between 0 and {max_val}',
+        {'max_val': max_val},
+    )
 
 
 def parse_float_alpha(value: Union[None, str, float, int]) -> Optional[float]:
