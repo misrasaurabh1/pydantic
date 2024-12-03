@@ -5,7 +5,6 @@ Import of this module is deferred since it contains imports of many standard lib
 
 from __future__ import annotations as _annotations
 
-import math
 import re
 import typing
 from decimal import Decimal
@@ -168,11 +167,8 @@ def compile_pattern(pattern: PatternType) -> typing.Pattern[PatternType]:
 
 
 def ip_v4_address_validator(input_value: Any, /) -> IPv4Address:
-    if isinstance(input_value, IPv4Address):
-        return input_value
-
     try:
-        return IPv4Address(input_value)
+        return input_value if isinstance(input_value, IPv4Address) else IPv4Address(input_value)
     except ValueError:
         raise PydanticCustomError('ip_v4_address', 'Input is not a valid IPv4 address')
 
@@ -248,7 +244,7 @@ def fraction_validator(input_value: Any, /) -> Fraction:
 
 
 def forbid_inf_nan_check(x: Any) -> Any:
-    if not math.isfinite(x):
+    if isinstance(x, (int, float)) and not (-float('inf') < x < float('inf')):
         raise PydanticKnownError('finite_number')
     return x
 
