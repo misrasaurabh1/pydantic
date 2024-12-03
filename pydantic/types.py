@@ -2624,7 +2624,8 @@ class EncodedStr:
         Returns:
             The encoded data.
         """
-        return self.encoder.encode(value.encode()).decode()  # noqa: UP008
+        encoded_value = self.encoder.encode(value.encode())
+        return encoded_value.decode()
 
     def __hash__(self) -> int:
         return hash(self.encoder)
