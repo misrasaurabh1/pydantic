@@ -1,5 +1,6 @@
 """The types module contains custom types used by pydantic."""
 
+from __future__ import annotations
 from __future__ import annotations as _annotations
 
 import base64
@@ -3044,10 +3045,6 @@ class Discriminator:
 
     def _convert_schema(self, original_schema: core_schema.CoreSchema) -> core_schema.TaggedUnionSchema:
         if original_schema['type'] != 'union':
-            # This likely indicates that the schema was a single-item union that was simplified.
-            # In this case, we do the same thing we do in
-            # `pydantic._internal._discriminated_union._ApplyInferredDiscriminator._apply_to_root`, namely,
-            # package the generated schema back into a single-item union.
             original_schema = core_schema.union_schema([original_schema])
 
         tagged_union_choices = {}
@@ -3056,7 +3053,7 @@ class Discriminator:
             if isinstance(choice, tuple):
                 choice, tag = choice
             metadata = choice.get('metadata')
-            if metadata is not None:
+            if metadata:
                 metadata_tag = metadata.get(_core_utils.TAGGED_UNION_TAG_KEY)
                 if metadata_tag is not None:
                     tag = metadata_tag
@@ -3067,20 +3064,10 @@ class Discriminator:
                 )
             tagged_union_choices[tag] = choice
 
-        # Have to do these verbose checks to ensure falsy values ('' and {}) don't get ignored
-        custom_error_type = self.custom_error_type
-        if custom_error_type is None:
-            custom_error_type = original_schema.get('custom_error_type')
+        custom_error_type = self.custom_error_type or original_schema.get('custom_error_type')
+        custom_error_message = self.custom_error_message or original_schema.get('custom_error_message')
+        custom_error_context = self.custom_error_context or original_schema.get('custom_error_context')
 
-        custom_error_message = self.custom_error_message
-        if custom_error_message is None:
-            custom_error_message = original_schema.get('custom_error_message')
-
-        custom_error_context = self.custom_error_context
-        if custom_error_context is None:
-            custom_error_context = original_schema.get('custom_error_context')
-
-        custom_error_type = original_schema.get('custom_error_type') if custom_error_type is None else custom_error_type
         return core_schema.tagged_union_schema(
             tagged_union_choices,
             self.discriminator,
