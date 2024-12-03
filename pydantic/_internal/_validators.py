@@ -5,7 +5,6 @@ Import of this module is deferred since it contains imports of many standard lib
 
 from __future__ import annotations as _annotations
 
-import math
 import re
 import typing
 from decimal import Decimal
@@ -248,7 +247,7 @@ def fraction_validator(input_value: Any, /) -> Fraction:
 
 
 def forbid_inf_nan_check(x: Any) -> Any:
-    if not math.isfinite(x):
+    if isinstance(x, (int, float)) and not (-float('inf') < x < float('inf')):
         raise PydanticKnownError('finite_number')
     return x
 
@@ -258,18 +257,13 @@ def _safe_repr(v: Any) -> int | float | str:
 
     See tests/test_types.py::test_annotated_metadata_any_order for some context.
     """
-    if isinstance(v, (int, float, str)):
-        return v
-    return repr(v)
+    return v if isinstance(v, (int, float, str)) else repr(v)
 
 
 def greater_than_validator(x: Any, gt: Any) -> Any:
-    try:
-        if not (x > gt):
-            raise PydanticKnownError('greater_than', {'gt': _safe_repr(gt)})
-        return x
-    except TypeError:
-        raise TypeError(f"Unable to apply constraint 'gt' to supplied value {x}")
+    if not (x > gt):
+        raise PydanticKnownError('greater_than', {'gt': _safe_repr(gt)})
+    return x
 
 
 def greater_than_or_equal_validator(x: Any, ge: Any) -> Any:
