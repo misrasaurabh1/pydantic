@@ -1509,7 +1509,7 @@ class _SecretBase(Generic[SecretType]):
         return self._secret_value
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self.get_secret_value() == other.get_secret_value()
+        return isinstance(other, self.__class__) and self._secret_value == other._secret_value
 
     def __hash__(self) -> int:
         return hash(self.get_secret_value())
