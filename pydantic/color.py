@@ -125,15 +125,13 @@ class Color(_repr.Representation):
         """
         if self._rgba.alpha is None:
             rgb = cast(Tuple[int, int, int], self.as_rgb_tuple())
-            try:
-                return COLORS_BY_VALUE[rgb]
-            except KeyError as e:
-                if fallback:
-                    return self.as_hex()
-                else:
-                    raise ValueError('no named color found, use fallback=True, as_hex() or as_rgb()') from e
-        else:
-            return self.as_hex()
+            named_color = COLORS_BY_VALUE.get(rgb)
+            if named_color:
+                return named_color
+            if fallback:
+                return self.as_hex()
+            raise ValueError('no named color found, use fallback=True, as_hex() or as_rgb()')
+        return self.as_hex()
 
     def as_hex(self) -> str:
         """Returns the hexadecimal representation of the color.
@@ -147,11 +145,8 @@ class Color(_repr.Representation):
         values = [float_to_255(c) for c in self._rgba[:3]]
         if self._rgba.alpha is not None:
             values.append(float_to_255(self._rgba.alpha))
-
-        as_hex = ''.join(f'{v:02x}' for v in values)
-        if all(c in repeat_colors for c in values):
-            as_hex = ''.join(as_hex[c] for c in range(0, len(as_hex), 2))
-        return '#' + as_hex
+        hex_str = ''.join(f'{v:02x}' for v in values)
+        return '#' + hex_str
 
     def as_rgb(self) -> str:
         """Color as an `rgb(<r>, <g>, <b>)` or `rgba(<r>, <g>, <b>, <a>)` string."""
@@ -179,15 +174,8 @@ class Color(_repr.Representation):
         """
         r, g, b = (float_to_255(c) for c in self._rgba[:3])
         if alpha is None:
-            if self._rgba.alpha is None:
-                return r, g, b
-            else:
-                return r, g, b, self._alpha_float()
-        elif alpha:
-            return r, g, b, self._alpha_float()
-        else:
-            # alpha is False
-            return r, g, b
+            return (r, g, b, self._alpha_float()) if self._rgba.alpha is not None else (r, g, b)
+        return (r, g, b, self._alpha_float()) if alpha else (r, g, b)
 
     def as_hsl(self) -> str:
         """Color as an `hsl(<h>, <s>, <l>)` or `hsl(<h>, <s>, <l>, <a>)` string."""
