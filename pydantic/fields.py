@@ -1156,9 +1156,10 @@ class ModelPrivateAttr(_repr.Representation):
         return _utils.smart_deepcopy(self.default) if self.default_factory is None else self.default_factory()
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and (self.default, self.default_factory) == (
-            other.default,
-            other.default_factory,
+        return (
+            isinstance(other, self.__class__)
+            and self.default == other.default
+            and self.default_factory == other.default_factory
         )
 
 
