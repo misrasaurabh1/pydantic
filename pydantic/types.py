@@ -2108,23 +2108,18 @@ class ByteSize(int):
         """
         if decimal:
             divisor = 1000
-            units = 'B', 'KB', 'MB', 'GB', 'TB', 'PB'
-            final_unit = 'EB'
+            units = ('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB')
         else:
             divisor = 1024
-            units = 'B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'
-            final_unit = 'EiB'
+            units = ('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB')
 
         num = float(self)
         for unit in units:
-            if abs(num) < divisor:
-                if unit == 'B':
-                    return f'{num:0.0f}{separator}{unit}'
-                else:
-                    return f'{num:0.1f}{separator}{unit}'
+            if num < divisor:
+                return f'{num:0.0f}{separator}{unit}' if unit == 'B' else f'{num:0.1f}{separator}{unit}'
             num /= divisor
 
-        return f'{num:0.1f}{separator}{final_unit}'
+        return f'{num:0.1f}{separator}{units[-1]}'
 
     def to(self, unit: str) -> float:
         """Converts a byte size to another unit, including both byte and bit units.
