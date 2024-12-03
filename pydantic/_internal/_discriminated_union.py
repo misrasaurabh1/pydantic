@@ -1,6 +1,6 @@
 from __future__ import annotations as _annotations
 
-from typing import TYPE_CHECKING, Any, Hashable, Sequence
+from typing import TYPE_CHECKING, Any, Hashable, Sequence, Union
 
 from pydantic_core import CoreSchema, core_schema
 
@@ -201,42 +201,28 @@ class _ApplyInferredDiscriminator:
         """
         if schema['type'] == 'nullable':
             self._is_nullable = True
-            wrapped = self._apply_to_root(schema['schema'])
-            nullable_wrapper = schema.copy()
-            nullable_wrapper['schema'] = wrapped
-            return nullable_wrapper
+            schema['schema'] = self._apply_to_root(schema['schema'])
+            return schema
 
         if schema['type'] == 'definitions':
-            wrapped = self._apply_to_root(schema['schema'])
-            definitions_wrapper = schema.copy()
-            definitions_wrapper['schema'] = wrapped
-            return definitions_wrapper
+            schema['schema'] = self._apply_to_root(schema['schema'])
+            return schema
 
         if schema['type'] != 'union':
-            # If the schema is not a union, it probably means it just had a single member and
-            # was flattened by pydantic_core.
-            # However, it still may make sense to apply the discriminator to this schema,
-            # as a way to get discriminated-union-style error messages, so we allow this here.
             schema = core_schema.union_schema([schema])
 
-        # Reverse the choices list before extending the stack so that they get handled in the order they occur
         choices_schemas = [v[0] if isinstance(v, tuple) else v for v in schema['choices'][::-1]]
         self._choices_to_handle.extend(choices_schemas)
         while self._choices_to_handle:
             choice = self._choices_to_handle.pop()
             self._handle_choice(choice)
 
-        if self._discriminator_alias is not None and self._discriminator_alias != self.discriminator:
-            # * We need to annotate `discriminator` as a union here to handle both branches of this conditional
-            # * We need to annotate `discriminator` as list[list[str | int]] and not list[list[str]] due to the
-            #   invariance of list, and because list[list[str | int]] is the type of the discriminator argument
-            #   to tagged_union_schema below
-            # * See the docstring of pydantic_core.core_schema.tagged_union_schema for more details about how to
-            #   interpret the value of the discriminator argument to tagged_union_schema. (The list[list[str]] here
-            #   is the appropriate way to provide a list of fallback attributes to check for a discriminator value.)
-            discriminator: str | list[list[str | int]] = [[self.discriminator], [self._discriminator_alias]]
-        else:
-            discriminator = self.discriminator
+        discriminator: Union[str, list[list[Union[str, int]]]] = (
+            [[self.discriminator], [self._discriminator_alias]]
+            if self._discriminator_alias and self._discriminator_alias != self.discriminator
+            else self.discriminator
+        )
+
         return core_schema.tagged_union_schema(
             choices=self._tagged_union_choices,
             discriminator=discriminator,
