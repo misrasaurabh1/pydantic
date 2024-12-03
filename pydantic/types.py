@@ -1296,6 +1296,9 @@ class PathType:
     def __hash__(self) -> int:
         return hash(type(self.path_type))
 
+    def __init__(self, path_type):
+        self.path_type = path_type
+
 
 FilePath = Annotated[Path, PathType('file')]
 """A path that must point to a file.
