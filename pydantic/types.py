@@ -1981,24 +1981,6 @@ class PaymentCardNumber(str):
 
         return brand
 
-    @staticmethod
-    def validate_digits(card_number: str):
-        if not card_number.isdigit():
-            raise ValueError('Card number must contain only digits.')
-
-    @staticmethod
-    def validate_luhn_check_digit(card_number: str) -> str:
-        def digits_of(n):
-            return [int(d) for d in str(n)]
-
-        digits = digits_of(card_number)
-        odd_digits = digits[-1::-2]
-        even_digits = digits[-2::-2]
-        checksum = sum(odd_digits) + sum(sum(digits_of(2 * d)) for d in even_digits)
-        if checksum % 10 != 0:
-            raise ValueError('Invalid card number based on Luhn algorithm.')
-        return card_number
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ BYTE SIZE TYPE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
