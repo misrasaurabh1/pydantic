@@ -5,7 +5,6 @@ Import of this module is deferred since it contains imports of many standard lib
 
 from __future__ import annotations as _annotations
 
-import math
 import re
 import typing
 from decimal import Decimal
@@ -228,13 +227,12 @@ def ip_v4_interface_validator(input_value: Any, /) -> IPv4Interface:
 
 
 def ip_v6_interface_validator(input_value: Any, /) -> IPv6Interface:
-    if isinstance(input_value, IPv6Interface):
-        return input_value
-
-    try:
-        return IPv6Interface(input_value)
-    except ValueError:
-        raise PydanticCustomError('ip_v6_interface', 'Input is not a valid IPv6 interface')
+    if not isinstance(input_value, IPv6Interface):
+        try:
+            input_value = IPv6Interface(input_value)
+        except ValueError:
+            raise PydanticCustomError('ip_v6_interface', 'Input is not a valid IPv6 interface')
+    return input_value
 
 
 def fraction_validator(input_value: Any, /) -> Fraction:
@@ -248,7 +246,7 @@ def fraction_validator(input_value: Any, /) -> Fraction:
 
 
 def forbid_inf_nan_check(x: Any) -> Any:
-    if not math.isfinite(x):
+    if isinstance(x, (int, float)) and not (-float('inf') < x < float('inf')):
         raise PydanticKnownError('finite_number')
     return x
 
