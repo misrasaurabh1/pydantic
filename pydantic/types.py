@@ -1954,33 +1954,51 @@ class PaymentCardNumber(str):
         """
         if card_number[0] == '4':
             brand = PaymentCardBrand.visa
+            valid = len(card_number) in {13, 16, 19}
+            required_length = '13, 16 or 19'
         elif 51 <= int(card_number[:2]) <= 55:
             brand = PaymentCardBrand.mastercard
+            valid = len(card_number) == 16
+            required_length = 16
         elif card_number[:2] in {'34', '37'}:
             brand = PaymentCardBrand.amex
+            valid = len(card_number) == 15
+            required_length = 15
         else:
             brand = PaymentCardBrand.other
-
-        required_length: None | int | str = None
-        if brand in PaymentCardBrand.mastercard:
-            required_length = 16
-            valid = len(card_number) == required_length
-        elif brand == PaymentCardBrand.visa:
-            required_length = '13, 16 or 19'
-            valid = len(card_number) in {13, 16, 19}
-        elif brand == PaymentCardBrand.amex:
-            required_length = 15
-            valid = len(card_number) == required_length
-        else:
             valid = True
+            required_length = None
 
         if not valid:
             raise PydanticCustomError(
                 'payment_card_number_brand',
-                'Length for a {brand} card must be {required_length}',
+                f'Length for a {brand} card must be {required_length}',
                 {'brand': brand, 'required_length': required_length},
             )
         return brand
+
+    @staticmethod
+    def validate_digits(card_number: str) -> None:
+        if not card_number.isdigit():
+            raise ValueError('Card number must only contain digits')
+
+    @staticmethod
+    def validate_luhn_check_digit(card_number: str) -> str:
+        def luhn_checksum(card_number: str) -> int:
+            def digits_of(n: str) -> list[int]:
+                return [int(d) for d in n]
+
+            digits = digits_of(card_number)
+            odd_digits = digits[-1::-2]
+            even_digits = digits[-2::-2]
+            checksum = sum(odd_digits)
+            for d in even_digits:
+                checksum += sum(digits_of(str(d * 2)))
+            return checksum % 10
+
+        if luhn_checksum(card_number) != 0:
+            raise ValueError('Invalid card number')
+        return card_number
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ BYTE SIZE TYPE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
