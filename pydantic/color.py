@@ -145,13 +145,14 @@ class Color(_repr.Representation):
             The hexadecimal representation of the color.
         """
         values = [float_to_255(c) for c in self._rgba[:3]]
-        if self._rgba.alpha is not None:
-            values.append(float_to_255(self._rgba.alpha))
+        alpha = self._rgba.alpha
+        if alpha is not None:
+            values.append(float_to_255(alpha))
 
         as_hex = ''.join(f'{v:02x}' for v in values)
         if all(c in repeat_colors for c in values):
-            as_hex = ''.join(as_hex[c] for c in range(0, len(as_hex), 2))
-        return '#' + as_hex
+            as_hex = as_hex[::2]
+        return f'#{as_hex}'
 
     def as_rgb(self) -> str:
         """Color as an `rgb(<r>, <g>, <b>)` or `rgba(<r>, <g>, <b>, <a>)` string."""
