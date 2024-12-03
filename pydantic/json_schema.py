@@ -725,8 +725,12 @@ class GenerateJsonSchema:
         Returns:
             The generated JSON schema.
         """
-        json_schema = {'type': 'string', 'format': 'base64url' if self._config.ser_json_bytes == 'base64' else 'binary'}
-        self.update_with_validations(json_schema, schema, self.ValidationsMapping.bytes)
+        ser_json_bytes = self._config.ser_json_bytes
+        json_schema = {'type': 'string', 'format': 'base64url' if ser_json_bytes == 'base64' else 'binary'}
+        update_with_validations = self.update_with_validations
+        validations_map = self.ValidationsMapping.bytes
+
+        update_with_validations(json_schema, schema, validations_map)
         return json_schema
 
     def date_schema(self, schema: core_schema.DateSchema) -> JsonSchemaValue:
