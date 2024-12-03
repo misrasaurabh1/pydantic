@@ -58,7 +58,7 @@ class Representation:
         return f'<Recursion on {type(object).__name__} with id={id(object)}>'
 
     def __repr_str__(self, join_str: str) -> str:
-        return join_str.join(repr(v) if a is None else f'{a}={v!r}' for a, v in self.__repr_args__())
+        return join_str.join([repr(v) if a is None else f'{a}={v!r}' for a, v in self.__repr_args__()])
 
     def __pretty__(self, fmt: typing.Callable[[Any], Any], **kwargs: Any) -> typing.Generator[Any, None, None]:
         """Used by devtools (https://python-devtools.helpmanual.io/) to pretty print objects."""
