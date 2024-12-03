@@ -1638,7 +1638,7 @@ class Secret(_SecretBase[SecretType]):
     """
 
     def _display(self) -> str | bytes:
-        return '**********' if self.get_secret_value() else ''
+        return '**********' if self._secret_value else ''
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source: type[Any], handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
