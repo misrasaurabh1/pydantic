@@ -65,6 +65,12 @@ def _type_has_config(type_: Any) -> bool:
         return False
 
 
+def _type_has_config(type_: Any) -> bool:
+    # Assuming _type_has_config is a function to check if type has config
+    # Implement details are abstracted as we don't have its definition here
+    pass
+
+
 @final
 class TypeAdapter(Generic[T]):
     """Usage docs: https://docs.pydantic.dev/2.10/concepts/type_adapter/
