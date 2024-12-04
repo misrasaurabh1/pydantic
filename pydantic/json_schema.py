@@ -819,24 +819,22 @@ class GenerateJsonSchema:
             The generated JSON schema.
         """
         enum_type = schema['cls']
-        description = None if not enum_type.__doc__ else inspect.cleandoc(enum_type.__doc__)
-        if (
-            description == 'An enumeration.'
-        ):  # This is the default value provided by enum.EnumMeta.__new__; don't use it
+        description = enum_type.__doc__
+        if description == 'An enumeration.':
             description = None
-        result: dict[str, Any] = {'title': enum_type.__name__, 'description': description}
-        result = {k: v for k, v in result.items() if v is not None}
+        result = {'title': enum_type.__name__}
+        if description:
+            result['description'] = inspect.cleandoc(description)
 
         expected = [to_jsonable_python(v.value) for v in schema['members']]
-
         result['enum'] = expected
 
         types = {type(e) for e in expected}
-        if isinstance(enum_type, str) or types == {str}:
+        if types == {str}:
             result['type'] = 'string'
-        elif isinstance(enum_type, int) or types == {int}:
+        elif types == {int}:
             result['type'] = 'integer'
-        elif isinstance(enum_type, float) or types == {float}:
+        elif types == {float}:
             result['type'] = 'number'
         elif types == {bool}:
             result['type'] = 'boolean'
