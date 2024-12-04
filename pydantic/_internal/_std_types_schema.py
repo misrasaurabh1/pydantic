@@ -62,6 +62,18 @@ class InnerSchemaValidator:
     def __get_pydantic_core_schema__(self, _source_type: Any, _handler: GetCoreSchemaHandler) -> CoreSchema:
         return self.core_schema
 
+    def __init__(
+        self,
+        core_schema: CoreSchema,
+        js_schema: JsonSchemaValue = None,
+        js_core_schema: CoreSchema = None,
+        js_schema_update: JsonSchemaValue = None,
+    ):
+        self.core_schema = core_schema
+        self.js_schema = js_schema
+        self.js_core_schema = js_core_schema
+        self.js_schema_update = js_schema_update
+
 
 def path_schema_prepare_pydantic_annotations(
     source_type: Any, annotations: Iterable[Any]
