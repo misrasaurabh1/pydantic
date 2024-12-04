@@ -28,8 +28,10 @@ from typing import (
 
 import pydantic_core
 import typing_extensions
-from pydantic_core import PydanticUndefined
+from pydantic_core import CoreSchema, PydanticUndefined
 from typing_extensions import Self, TypeAlias, Unpack
+
+from pydantic.fields import FieldInfo
 
 from ._internal import (
     _config,
@@ -389,16 +391,10 @@ class BaseModel(metaclass=_model_construction.ModelMetaclass):
         """
         copied = self.__deepcopy__() if deep else self.__copy__()
         if update:
-            if self.model_config.get('extra') == 'allow':
-                for k, v in update.items():
-                    if k in self.__pydantic_fields__:
-                        copied.__dict__[k] = v
-                    else:
-                        if copied.__pydantic_extra__ is None:
-                            copied.__pydantic_extra__ = {}
-                        copied.__pydantic_extra__[k] = v
-            else:
-                copied.__dict__.update(update)
+            dict_to_update = (
+                copied.__pydantic_extra__ if copied.model_config.get('extra') == 'allow' else copied.__dict__
+            )
+            dict_to_update.update(update)
             copied.__pydantic_fields_set__.update(update.keys())
         return copied
 
@@ -838,16 +834,15 @@ class BaseModel(metaclass=_model_construction.ModelMetaclass):
         _object_setattr(m, '__dict__', copy(self.__dict__))
         _object_setattr(m, '__pydantic_extra__', copy(self.__pydantic_extra__))
         _object_setattr(m, '__pydantic_fields_set__', copy(self.__pydantic_fields_set__))
-
-        if not hasattr(self, '__pydantic_private__') or self.__pydantic_private__ is None:
-            _object_setattr(m, '__pydantic_private__', None)
-        else:
-            _object_setattr(
-                m,
-                '__pydantic_private__',
-                {k: v for k, v in self.__pydantic_private__.items() if v is not PydanticUndefined},
-            )
-
+        _object_setattr(
+            m,
+            '__pydantic_private__',
+            (
+                {k: v for k, v in self.__pydantic_private__.items() if v is not PydanticUndefined}
+                if self.__pydantic_private__
+                else None
+            ),
+        )
         return m
 
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
@@ -856,19 +851,16 @@ class BaseModel(metaclass=_model_construction.ModelMetaclass):
         m = cls.__new__(cls)
         _object_setattr(m, '__dict__', deepcopy(self.__dict__, memo=memo))
         _object_setattr(m, '__pydantic_extra__', deepcopy(self.__pydantic_extra__, memo=memo))
-        # This next line doesn't need a deepcopy because __pydantic_fields_set__ is a set[str],
-        # and attempting a deepcopy would be marginally slower.
         _object_setattr(m, '__pydantic_fields_set__', copy(self.__pydantic_fields_set__))
-
-        if not hasattr(self, '__pydantic_private__') or self.__pydantic_private__ is None:
-            _object_setattr(m, '__pydantic_private__', None)
-        else:
-            _object_setattr(
-                m,
-                '__pydantic_private__',
-                deepcopy({k: v for k, v in self.__pydantic_private__.items() if v is not PydanticUndefined}, memo=memo),
-            )
-
+        _object_setattr(
+            m,
+            '__pydantic_private__',
+            (
+                deepcopy({k: v for k, v in self.__pydantic_private__.items() if v is not PydanticUndefined}, memo=memo)
+                if self.__pydantic_private__
+                else None
+            ),
+        )
         return m
 
     if not TYPE_CHECKING:
