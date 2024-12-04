@@ -2416,7 +2416,14 @@ _HashableJsonValue: TypeAlias = Union[
 
 
 def _deduplicate_schemas(schemas: Iterable[JsonDict]) -> list[JsonDict]:
-    return list({_make_json_hashable(schema): schema for schema in schemas}.values())
+    seen = set()
+    deduplicated_schemas = []
+    for schema in schemas:
+        hashable_schema = _make_json_hashable(schema)
+        if hashable_schema not in seen:
+            seen.add(hashable_schema)
+            deduplicated_schemas.append(schema)
+    return deduplicated_schemas
 
 
 def _make_json_hashable(value: JsonValue) -> _HashableJsonValue:
@@ -2633,3 +2640,11 @@ def _get_typed_dict_config(cls: type[Any] | None) -> ConfigDict:
         except AttributeError:
             pass
     return {}
+
+
+def _make_json_hashable(obj: JsonValue) -> Hashable:
+    if isinstance(obj, dict):
+        return frozenset((key, _make_json_hashable(value)) for key, value in obj.items())
+    elif isinstance(obj, list):
+        return tuple(_make_json_hashable(item) for item in obj)
+    return obj
