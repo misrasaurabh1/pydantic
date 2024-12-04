@@ -28,8 +28,10 @@ from typing import (
 
 import pydantic_core
 import typing_extensions
-from pydantic_core import PydanticUndefined
+from pydantic_core import CoreSchema, PydanticUndefined
 from typing_extensions import Self, TypeAlias, Unpack
+
+from pydantic.fields import FieldInfo
 
 from ._internal import (
     _config,
@@ -1711,6 +1713,14 @@ def create_model(  # noqa: C901
         _create_model_module=__module__,
         **kwds,
     )
+
+
+def make_deepcopy(obj, memo=None):
+    return deepcopy(obj, memo=memo)
+
+
+def make_copy(dict_value):
+    return copy(dict_value)
 
 
 __getattr__ = getattr_migration(__name__)
