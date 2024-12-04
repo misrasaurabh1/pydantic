@@ -2110,33 +2110,23 @@ class GenerateJsonSchema:
             The schema with redundant sibling keys removed.
         """
         if '$ref' in json_schema:
-            # prevent modifications to the input; this copy may be safe to drop if there is significant overhead
             json_schema = json_schema.copy()
-
             referenced_json_schema = self.get_schema_from_definitions(JsonRef(json_schema['$ref']))
-            if referenced_json_schema is None:
-                # This can happen when building schemas for models with not-yet-defined references.
-                # It may be a good idea to do a recursive pass at the end of the generation to remove
-                # any redundant override keys.
-                return json_schema
-            for k, v in list(json_schema.items()):
-                if k == '$ref':
-                    continue
-                if k in referenced_json_schema and referenced_json_schema[k] == v:
-                    del json_schema[k]  # redundant key
-
+            if referenced_json_schema is not None:
+                for k in list(json_schema.keys()):
+                    if k != '$ref' and json_schema.get(k) == referenced_json_schema.get(k):
+                        del json_schema[k]
         return json_schema
 
     def get_schema_from_definitions(self, json_ref: JsonRef) -> JsonSchemaValue | None:
-        try:
-            def_ref = self.json_to_defs_refs[json_ref]
-            if def_ref in self._core_defs_invalid_for_json_schema:
-                raise self._core_defs_invalid_for_json_schema[def_ref]
-            return self.definitions.get(def_ref, None)
-        except KeyError:
+        def_ref = self.json_to_defs_refs.get(json_ref)
+        if def_ref is None:
             if json_ref.startswith(('http://', 'https://')):
                 return None
-            raise
+            raise KeyError
+        if def_ref in self._core_defs_invalid_for_json_schema:
+            raise self._core_defs_invalid_for_json_schema[def_ref]
+        return self.definitions.get(def_ref)
 
     def encode_default(self, dft: Any) -> Any:
         """Encode a default value to a JSON-serializable value.
@@ -2317,6 +2307,10 @@ class GenerateJsonSchema:
                     raise
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
+
+    def build_schema_type_to_method(self):
+        # Placeholder implementation for build_schema_type_to_method
+        return {}
 
 
 # ##### Start JSON Schema Generation Functions #####
