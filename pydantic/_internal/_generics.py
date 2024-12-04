@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from types import prepare_class
 from typing import TYPE_CHECKING, Any, Iterator, Mapping, MutableMapping, Tuple, TypeVar
+from typing import get_origin as typing_get_origin
 from weakref import WeakValueDictionary
 
 import typing_extensions
@@ -212,9 +213,7 @@ def get_args(v: Any) -> Any:
 
 def get_origin(v: Any) -> Any:
     pydantic_generic_metadata: PydanticGenericMetadata | None = getattr(v, '__pydantic_generic_metadata__', None)
-    if pydantic_generic_metadata:
-        return pydantic_generic_metadata.get('origin')
-    return typing_extensions.get_origin(v)
+    return pydantic_generic_metadata.get('origin') if pydantic_generic_metadata else typing_get_origin(v)
 
 
 def get_standard_typevars_map(cls: Any) -> dict[TypeVar, Any] | None:
@@ -222,16 +221,12 @@ def get_standard_typevars_map(cls: Any) -> dict[TypeVar, Any] | None:
     `replace_types` function. Specifically, this works with standard typing generics and typing._GenericAlias.
     """
     origin = get_origin(cls)
-    if origin is None:
-        return None
-    if not hasattr(origin, '__parameters__'):
+    if origin is None or not hasattr(origin, '__parameters__'):
         return None
 
     # In this case, we know that cls is a _GenericAlias, and origin is the generic type
     # So it is safe to access cls.__args__ and origin.__parameters__
-    args: tuple[Any, ...] = cls.__args__  # type: ignore
-    parameters: tuple[TypeVar, ...] = origin.__parameters__
-    return dict(zip(parameters, args))
+    return dict(zip(origin.__parameters__, cls.__args__))  # type: ignore
 
 
 def get_model_typevars_map(cls: type[BaseModel]) -> dict[TypeVar, Any] | None:
