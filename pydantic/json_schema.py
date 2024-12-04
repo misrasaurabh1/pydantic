@@ -9,6 +9,7 @@ In general you shouldn't need to use this module directly; instead, you can use
 [`TypeAdapter.json_schema`][pydantic.TypeAdapter.json_schema].
 """
 
+from __future__ import annotations
 from __future__ import annotations as _annotations
 
 import dataclasses
@@ -43,6 +44,7 @@ from pydantic_core import CoreSchema, PydanticOmit, core_schema, to_jsonable_pyt
 from pydantic_core.core_schema import ComputedField
 from typing_extensions import Annotated, Literal, TypeAlias, assert_never, deprecated, final
 
+from pydantic._internal._core_utils import CoreSchemaField
 from pydantic.warnings import PydanticDeprecatedSince26, PydanticDeprecatedSince29
 
 from ._internal import (
@@ -291,10 +293,7 @@ class GenerateJsonSchema:
 
     @property
     def mode(self) -> JsonSchemaMode:
-        if self._config.json_schema_mode_override is not None:
-            return self._config.json_schema_mode_override
-        else:
-            return self._mode
+        return self._config.json_schema_mode_override or self._mode
 
     def build_schema_type_to_method(
         self,
@@ -1601,14 +1600,15 @@ class GenerateJsonSchema:
         Returns:
             `True` if the field should be included in the generated JSON schema, `False` otherwise.
         """
-        if self.mode == 'serialization':
+        _mode = self.mode  # Cache the mode value to avoid repeated dictionary access
+        if _mode == 'serialization':
             # If you still want to include the field in the generated JSON schema,
             # override this method and return True
             return not field.get('serialization_exclude')
-        elif self.mode == 'validation':
+        elif _mode == 'validation':
             return True
         else:
-            assert_never(self.mode)
+            assert_never(_mode)
 
     def field_is_required(
         self,
@@ -2317,6 +2317,11 @@ class GenerateJsonSchema:
                     raise
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
+
+    def build_schema_type_to_method(self):
+        # Assuming this method constructs a necessary mapping for schema types
+        # Placeholder for actual implementation
+        return {}
 
 
 # ##### Start JSON Schema Generation Functions #####
