@@ -13,6 +13,7 @@ import collections.abc
 import dataclasses
 import os
 import typing
+from collections import defaultdict
 from functools import partial
 from typing import Any, Callable, Iterable, Tuple, TypeVar, cast
 
@@ -242,11 +243,11 @@ MAPPING_ORIGIN_MAP: dict[Any, Any] = {
 def defaultdict_validator(
     input_value: Any, handler: core_schema.ValidatorFunctionWrapHandler, default_default_factory: Callable[[], Any]
 ) -> collections.defaultdict[Any, Any]:
-    if isinstance(input_value, collections.defaultdict):
+    if isinstance(input_value, defaultdict):
         default_factory = input_value.default_factory
-        return collections.defaultdict(default_factory, handler(input_value))
     else:
-        return collections.defaultdict(default_default_factory, handler(input_value))
+        default_factory = default_default_factory
+    return defaultdict(default_factory, handler(input_value))
 
 
 def get_defaultdict_default_default_factory(values_source_type: Any) -> Callable[[], Any]:
