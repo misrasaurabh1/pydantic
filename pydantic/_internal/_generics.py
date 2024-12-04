@@ -173,12 +173,12 @@ def _get_caller_frame_info(depth: int = 2) -> tuple[str | None, bool]:
     """
     try:
         previous_caller_frame = sys._getframe(depth)
+        frame_globals = previous_caller_frame.f_globals
+        return frame_globals.get('__name__'), previous_caller_frame.f_locals is frame_globals
     except ValueError as e:
         raise RuntimeError('This function must be used inside another function') from e
     except AttributeError:  # sys module does not have _getframe function, so there's nothing we can do about it
         return None, False
-    frame_globals = previous_caller_frame.f_globals
-    return frame_globals.get('__name__'), previous_caller_frame.f_locals is frame_globals
 
 
 DictValues: type[Any] = {}.values().__class__
