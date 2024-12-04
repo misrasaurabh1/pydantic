@@ -1,4 +1,3 @@
-from __future__ import annotations
 from __future__ import annotations as _annotations
 
 from typing import TYPE_CHECKING, Any, Hashable, Sequence
@@ -455,7 +454,10 @@ class _ApplyInferredDiscriminator:
             return schema['expected']
 
         if schema_type == 'union':
-            values = []
+            # Generally when multiple values are allowed they should be placed in a single `Literal`, but
+            # we add this case to handle the situation where a field is annotated as a `Union` of `Literal`s.
+            # For example, this lets us handle `Union[Literal['key'], Union[Literal['Key'], Literal['KEY']]]`
+            values: list[Any] = []
             for choice in schema['choices']:
                 choice_schema = choice[0] if isinstance(choice, tuple) else choice
                 choice_values = self._infer_discriminator_values_for_inner_schema(choice_schema, source)
@@ -463,9 +465,11 @@ class _ApplyInferredDiscriminator:
             return values
 
         if schema_type == 'default':
+            # This will happen if the field has a default value; we ignore it while extracting the discriminator values
             return self._infer_discriminator_values_for_inner_schema(schema['schema'], source)
 
         if schema_type == 'function-after':
+            # After validators don't affect the discriminator values
             return self._infer_discriminator_values_for_inner_schema(schema['schema'], source)
 
         if schema_type in {'function-before', 'function-wrap', 'function-plain'}:
