@@ -2082,23 +2082,20 @@ class GenerateJsonSchema:
         Returns:
             A tuple of the definitions reference and the JSON schema that will refer to it.
         """
-        core_mode_ref = (core_ref, self.mode)
-        maybe_defs_ref = self.core_to_defs_refs.get(core_mode_ref)
-        if maybe_defs_ref is not None:
+        core_mode_ref = (core_ref, self._mode)
+        if core_mode_ref in self.core_to_defs_refs:
             json_ref = self.core_to_json_refs[core_mode_ref]
-            return maybe_defs_ref, {'$ref': json_ref}
+            return self.core_to_defs_refs[core_mode_ref], {'$ref': json_ref}
 
         defs_ref = self.get_defs_ref(core_mode_ref)
 
-        # populate the ref translation mappings
         self.core_to_defs_refs[core_mode_ref] = defs_ref
         self.defs_to_core_refs[defs_ref] = core_mode_ref
 
         json_ref = JsonRef(self.ref_template.format(model=defs_ref))
         self.core_to_json_refs[core_mode_ref] = json_ref
         self.json_to_defs_refs[json_ref] = defs_ref
-        ref_json_schema = {'$ref': json_ref}
-        return defs_ref, ref_json_schema
+        return defs_ref, {'$ref': json_ref}
 
     def handle_ref_overrides(self, json_schema: JsonSchemaValue) -> JsonSchemaValue:
         """Remove any sibling keys that are redundant with the referenced schema.
