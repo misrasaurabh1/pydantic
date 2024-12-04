@@ -2420,12 +2420,12 @@ def _deduplicate_schemas(schemas: Iterable[JsonDict]) -> list[JsonDict]:
 
 
 def _make_json_hashable(value: JsonValue) -> _HashableJsonValue:
-    if isinstance(value, dict):
+    value_type = type(value)
+    if value_type is dict:
         return tuple(sorted((k, _make_json_hashable(v)) for k, v in value.items()))
-    elif isinstance(value, list):
+    if value_type is list:
         return tuple(_make_json_hashable(v) for v in value)
-    else:
-        return value
+    return value
 
 
 @dataclasses.dataclass(**_internal_dataclass.slots_true)
