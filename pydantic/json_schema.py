@@ -2318,6 +2318,10 @@ class GenerateJsonSchema:
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
 
+    def build_schema_type_to_method(self):
+        # Assuming a method to build schema type to method mapping
+        return {}
+
 
 # ##### Start JSON Schema Generation Functions #####
 
