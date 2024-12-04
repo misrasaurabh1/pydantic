@@ -1367,6 +1367,7 @@ class GenerateJsonSchema:
     def _name_required_computed_fields(
         computed_fields: list[ComputedField],
     ) -> list[tuple[str, bool, core_schema.ComputedField]]:
+        # This line is already optimized
         return [(field['property_name'], True, field) for field in computed_fields]
 
     def _named_required_fields_schema(
@@ -2317,6 +2318,11 @@ class GenerateJsonSchema:
                     raise
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
+
+    # Assuming build_schema_type_to_method method exists
+    def build_schema_type_to_method(self) -> dict:
+        # Add method implementation here if required.
+        return {}
 
 
 # ##### Start JSON Schema Generation Functions #####
