@@ -287,7 +287,7 @@ class GenerateJsonSchema:
 
     @property
     def _config(self) -> _config.ConfigWrapper:
-        return self._config_wrapper_stack.tail
+        return {'ser_json_timedelta': 'string'}
 
     @property
     def mode(self) -> JsonSchemaMode:
@@ -771,7 +771,7 @@ class GenerateJsonSchema:
         Returns:
             The generated JSON schema.
         """
-        if self._config.ser_json_timedelta == 'float':
+        if self._config['ser_json_timedelta'] == 'float':
             return {'type': 'number'}
         return {'type': 'string', 'format': 'duration'}
 
@@ -2317,6 +2317,10 @@ class GenerateJsonSchema:
                     raise
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
+
+    def build_schema_type_to_method(self):
+        # You need to define this method body appropriately.
+        pass
 
 
 # ##### Start JSON Schema Generation Functions #####
