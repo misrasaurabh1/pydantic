@@ -96,14 +96,9 @@ def literal_values(tp: Any, /) -> list[Any]:
     return [x for value in values for x in literal_values(value)]
 
 
+@lru_cache
 def is_annotated(tp: Any, /) -> bool:
-    """Return whether the provided argument is a `Annotated` special form.
-
-    ```python {test="skip" lint="skip"}
-    is_annotated(Annotated[int, ...])
-    #> True
-    ```
-    """
+    """Return whether the provided argument is a `Annotated` special form."""
     return _is_typing_name(get_origin(tp), name='Annotated')
 
 
