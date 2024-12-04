@@ -26,11 +26,13 @@ from typing import (
     Callable,
     Counter,
     Dict,
+    FrozenSet,
     Hashable,
     Iterable,
     NewType,
     Pattern,
     Sequence,
+    Set,
     Tuple,
     TypeVar,
     Union,
@@ -2217,7 +2219,7 @@ class GenerateJsonSchema:
     def get_flattened_anyof(self, schemas: list[JsonSchemaValue]) -> JsonSchemaValue:
         members = []
         for schema in schemas:
-            if len(schema) == 1 and 'anyOf' in schema:
+            if 'anyOf' in schema and len(schema) == 1:
                 members.extend(schema['anyOf'])
             else:
                 members.append(schema)
@@ -2318,6 +2320,10 @@ class GenerateJsonSchema:
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
 
+    def build_schema_type_to_method(self):
+        # Placeholder for actual implementation to build schema type to method map
+        return {}
+
 
 # ##### Start JSON Schema Generation Functions #####
 
@@ -2416,7 +2422,14 @@ _HashableJsonValue: TypeAlias = Union[
 
 
 def _deduplicate_schemas(schemas: Iterable[JsonDict]) -> list[JsonDict]:
-    return list({_make_json_hashable(schema): schema for schema in schemas}.values())
+    seen: Set[FrozenSet] = set()
+    deduped = []
+    for schema in schemas:
+        hashable_schema = _make_json_hashable(schema)
+        if hashable_schema not in seen:
+            seen.add(hashable_schema)
+            deduped.append(schema)
+    return deduped
 
 
 def _make_json_hashable(value: JsonValue) -> _HashableJsonValue:
@@ -2633,3 +2646,11 @@ def _get_typed_dict_config(cls: type[Any] | None) -> ConfigDict:
         except AttributeError:
             pass
     return {}
+
+
+def _make_json_hashable(json_node: Any) -> Any:
+    if isinstance(json_node, dict):
+        return frozenset((k, _make_json_hashable(v)) for k, v in json_node.items())
+    elif isinstance(json_node, list):
+        return tuple(_make_json_hashable(item) for item in json_node)
+    return json_node
