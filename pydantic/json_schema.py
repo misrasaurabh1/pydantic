@@ -43,6 +43,7 @@ from pydantic_core import CoreSchema, PydanticOmit, core_schema, to_jsonable_pyt
 from pydantic_core.core_schema import ComputedField
 from typing_extensions import Annotated, Literal, TypeAlias, assert_never, deprecated, final
 
+from pydantic._internal._core_utils import CoreSchemaOrField
 from pydantic.warnings import PydanticDeprecatedSince26, PydanticDeprecatedSince29
 
 from ._internal import (
@@ -2317,6 +2318,11 @@ class GenerateJsonSchema:
                     raise
 
         self.definitions = {k: v for k, v in self.definitions.items() if k in visited_defs_refs}
+
+    def build_schema_type_to_method(self) -> Dict[str, Any]:
+        """Dummy method to mimic schema type to method builder"""
+        # Add actual implementation here
+        return {}
 
 
 # ##### Start JSON Schema Generation Functions #####
