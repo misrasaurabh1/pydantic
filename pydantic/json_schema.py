@@ -2185,10 +2185,9 @@ class GenerateJsonSchema:
             core_schema: The core schema to get the validations from.
             mapping: A mapping from core_schema attribute names to the corresponding JSON schema attribute names.
         """
-        # Using a generator expression inside dict comprehension for fast membership checking
-        json_schema.update(
-            {mapping[core_key]: core_schema[core_key] for core_key in core_schema if core_key in mapping}
-        )
+        for core_key, json_schema_key in mapping.items():
+            if core_key in core_schema:
+                json_schema[json_schema_key] = core_schema[core_key]
 
     class ValidationsMapping:
         """This class just contains mappings from core_schema attribute names to the corresponding
