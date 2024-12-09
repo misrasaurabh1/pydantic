@@ -662,9 +662,16 @@ class GenerateJsonSchema:
         Returns:
             The generated JSON schema.
         """
-        json_schema: dict[str, Any] = {'type': 'number'}
-        self.update_with_validations(json_schema, schema, self.ValidationsMapping.numeric)
-        json_schema = {k: v for k, v in json_schema.items() if v not in {math.inf, -math.inf}}
+        # Perform a single pass to generate and filter the schema
+        json_schema = {
+            'type': 'number',
+            **{
+                json_key: schema[core_key]
+                for core_key, json_key in self.ValidationsMapping.numeric.items()
+                if core_key in schema and schema[core_key] not in {math.inf, -math.inf}
+            },
+        }
+        # Return the filtered schema
         return json_schema
 
     def decimal_schema(self, schema: core_schema.DecimalSchema) -> JsonSchemaValue:
