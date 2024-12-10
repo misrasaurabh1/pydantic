@@ -662,9 +662,16 @@ class GenerateJsonSchema:
         Returns:
             The generated JSON schema.
         """
-        json_schema: dict[str, Any] = {'type': 'number'}
-        self.update_with_validations(json_schema, schema, self.ValidationsMapping.numeric)
-        json_schema = {k: v for k, v in json_schema.items() if v not in {math.inf, -math.inf}}
+        validations_map = self.ValidationsMapping.numeric
+        json_schema: JsonSchemaValue = {'type': 'number'}
+
+        # Update with the corresponding validations and filter out non-finite numbers
+        for core_key, json_schema_key in validations_map.items():
+            if core_key in schema:
+                val = schema[core_key]
+                if val not in {math.inf, -math.inf}:
+                    json_schema[json_schema_key] = val
+
         return json_schema
 
     def decimal_schema(self, schema: core_schema.DecimalSchema) -> JsonSchemaValue:
