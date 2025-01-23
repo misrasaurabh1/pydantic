@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import Any, Callable, Hashable, TypeVar, Union
+from collections.abc import Hashable
+from typing import Any, Callable, TypeVar, Union
 
 from pydantic_core import CoreSchema, core_schema
 from pydantic_core import validate_core_schema as _validate_core_schema
@@ -36,11 +37,6 @@ _CORE_SCHEMA_FIELD_TYPES = {'typed-dict-field', 'dataclass-field', 'model-field'
 _FUNCTION_WITH_INNER_SCHEMA_TYPES = {'function-before', 'function-after', 'function-wrap'}
 _LIST_LIKE_SCHEMA_WITH_ITEMS_TYPES = {'list', 'set', 'frozenset'}
 
-TAGGED_UNION_TAG_KEY = 'pydantic.internal.tagged_union_tag'
-"""
-Used in a `Tag` schema to specify the tag used for a discriminated union.
-"""
-
 
 def is_core_schema(
     schema: CoreSchemaOrField,
@@ -66,7 +62,7 @@ def is_list_like_schema_with_items_schema(
     return schema['type'] in _LIST_LIKE_SCHEMA_WITH_ITEMS_TYPES
 
 
-def get_type_ref(type_: type[Any], args_override: tuple[type[Any], ...] | None = None) -> str:
+def get_type_ref(type_: Any, args_override: tuple[type[Any], ...] | None = None) -> str:
     """Produces the ref to be used for this type by pydantic_core's core schemas.
 
     This `args_override` argument was added for the purpose of creating valid recursive references
@@ -184,7 +180,7 @@ class _WalkCoreSchema:
         mapping: dict[core_schema.CoreSchemaType, Recurse] = {}
         key: core_schema.CoreSchemaType
         for key in get_args(core_schema.CoreSchemaType):
-            method_name = f"handle_{key.replace('-', '_')}_schema"
+            method_name = f'handle_{key.replace("-", "_")}_schema'
             mapping[key] = getattr(self, method_name, self._handle_other_schemas)
         return mapping
 
@@ -280,11 +276,37 @@ class _WalkCoreSchema:
             schema['values_schema'] = self.walk(values_schema, f)
         return schema
 
-    def handle_function_schema(self, schema: AnyFunctionSchema, f: Walk) -> core_schema.CoreSchema:
-        if not is_function_with_inner_schema(schema):
-            return schema
+    def handle_function_after_schema(
+        self, schema: core_schema.AfterValidatorFunctionSchema, f: Walk
+    ) -> core_schema.CoreSchema:
         schema['schema'] = self.walk(schema['schema'], f)
         return schema
+
+    def handle_function_before_schema(
+        self, schema: core_schema.BeforeValidatorFunctionSchema, f: Walk
+    ) -> core_schema.CoreSchema:
+        schema['schema'] = self.walk(schema['schema'], f)
+        if 'json_schema_input_schema' in schema:
+            schema['json_schema_input_schema'] = self.walk(schema['json_schema_input_schema'], f)
+        return schema
+
+    # TODO duplicate schema types for serializers and validators, needs to be deduplicated:
+    def handle_function_plain_schema(
+        self, schema: core_schema.PlainValidatorFunctionSchema | core_schema.PlainSerializerFunctionSerSchema, f: Walk
+    ) -> core_schema.CoreSchema:
+        if 'json_schema_input_schema' in schema:
+            schema['json_schema_input_schema'] = self.walk(schema['json_schema_input_schema'], f)
+        return schema  # pyright: ignore[reportReturnType]
+
+    # TODO duplicate schema types for serializers and validators, needs to be deduplicated:
+    def handle_function_wrap_schema(
+        self, schema: core_schema.WrapValidatorFunctionSchema | core_schema.WrapSerializerFunctionSerSchema, f: Walk
+    ) -> core_schema.CoreSchema:
+        if 'schema' in schema:
+            schema['schema'] = self.walk(schema['schema'], f)
+        if 'json_schema_input_schema' in schema:
+            schema['json_schema_input_schema'] = self.walk(schema['json_schema_input_schema'], f)
+        return schema  # pyright: ignore[reportReturnType]
 
     def handle_union_schema(self, schema: core_schema.UnionSchema, f: Walk) -> core_schema.CoreSchema:
         new_choices: list[CoreSchema | tuple[CoreSchema, str]] = []
@@ -416,11 +438,11 @@ def walk_core_schema(schema: core_schema.CoreSchema, f: Walk, *, copy: bool = Tr
 def simplify_schema_references(schema: core_schema.CoreSchema) -> core_schema.CoreSchema:  # noqa: C901
     definitions: dict[str, core_schema.CoreSchema] = {}
     ref_counts: dict[str, int] = defaultdict(int)
-    involved_in_recursion: dict[str, bool] = {}
+    involved_in_recursion: set[str] = set()
     current_recursion_ref_count: dict[str, int] = defaultdict(int)
 
     def collect_refs(s: core_schema.CoreSchema, recurse: Recurse) -> core_schema.CoreSchema:
-        if s['type'] == 'definitions':
+        if 'definitions' in s and s['type'] == 'definitions':
             for definition in s['definitions']:
                 ref = get_ref(definition)
                 assert ref is not None
@@ -436,8 +458,7 @@ def simplify_schema_references(schema: core_schema.CoreSchema) -> core_schema.Co
                 if new_ref:
                     definitions[new_ref] = new
                 return core_schema.definition_reference_schema(schema_ref=ref)
-            else:
-                return recurse(s, collect_refs)
+            return recurse(s, collect_refs)
 
     schema = walk_core_schema(schema, collect_refs)
 
@@ -446,32 +467,28 @@ def simplify_schema_references(schema: core_schema.CoreSchema) -> core_schema.Co
             return recurse(s, count_refs)
         ref = s['schema_ref']
         ref_counts[ref] += 1
-
         if ref_counts[ref] >= 2:
             # If this model is involved in a recursion this should be detected
             # on its second encounter, we can safely stop the walk here.
             if current_recursion_ref_count[ref] != 0:
-                involved_in_recursion[ref] = True
+                involved_in_recursion.add(ref)
             return s
-
         current_recursion_ref_count[ref] += 1
         if 'serialization' in s:
             # Even though this is a `'definition-ref'` schema, there might
             # be more references inside the serialization schema:
             recurse(s, count_refs)
-
         next_s = definitions[ref]
         visited: set[str] = set()
-        while next_s['type'] == 'definition-ref':
-            if next_s['schema_ref'] in visited:
+        while 'schema_ref' in next_s and next_s['type'] == 'definition-ref':
+            next_ref = next_s['schema_ref']
+            if next_ref in visited:
                 raise PydanticUserError(
                     f'{ref} contains a circular reference to itself.', code='circular-reference-schema'
                 )
-
-            visited.add(next_s['schema_ref'])
-            ref_counts[next_s['schema_ref']] += 1
-            next_s = definitions[next_s['schema_ref']]
-
+            visited.add(next_ref)
+            ref_counts[next_ref] += 1
+            next_s = definitions[next_ref]
         recurse(next_s, count_refs)
         current_recursion_ref_count[ref] -= 1
         return s
@@ -481,29 +498,22 @@ def simplify_schema_references(schema: core_schema.CoreSchema) -> core_schema.Co
     assert all(c == 0 for c in current_recursion_ref_count.values()), 'this is a bug! please report it'
 
     def can_be_inlined(s: core_schema.DefinitionReferenceSchema, ref: str) -> bool:
-        if ref_counts[ref] > 1:
+        if ref_counts[ref] > 1 or ref in involved_in_recursion:
             return False
-        if involved_in_recursion.get(ref, False):
-            return False
-        if 'serialization' in s:
-            return False
-        if 'metadata' in s:
-            metadata = s['metadata']
-            for k in [
+        metadata = s.get('metadata', {})
+        return 'serialization' not in s and not any(
+            k in metadata
+            for k in (
                 *CoreMetadata.__annotations__.keys(),
                 'pydantic.internal.union_discriminator',
                 'pydantic.internal.tagged_union_tag',
-            ]:
-                if k in metadata:
-                    # we need to keep this as a ref
-                    return False
-        return True
+            )
+        )
 
     def inline_refs(s: core_schema.CoreSchema, recurse: Recurse) -> core_schema.CoreSchema:
         # Assume there are no infinite loops, because we already checked for that in `count_refs`
-        while s['type'] == 'definition-ref':
+        while 'schema_ref' in s and s['type'] == 'definition-ref':
             ref = s['schema_ref']
-
             # Check if the reference is only used once, not involved in recursion and does not have
             # any extra keys (like 'serialization')
             if can_be_inlined(s, ref):
@@ -579,6 +589,6 @@ def pretty_print_core_schema(
 
 
 def validate_core_schema(schema: CoreSchema) -> CoreSchema:
-    if 'PYDANTIC_SKIP_VALIDATING_CORE_SCHEMAS' in os.environ:
-        return schema
-    return _validate_core_schema(schema)
+    if os.getenv('PYDANTIC_VALIDATE_CORE_SCHEMAS'):
+        return _validate_core_schema(schema)
+    return schema
