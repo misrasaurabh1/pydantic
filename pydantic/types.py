@@ -2382,13 +2382,9 @@ class Base64Encoder(EncoderProtocol):
         """
         return base64.b64encode(value)
 
-    @classmethod
-    def get_json_format(cls) -> Literal['base64']:
-        """Get the JSON format for the encoded data.
-
-        Returns:
-            The JSON format for the encoded data.
-        """
+    @staticmethod
+    def get_json_format() -> Literal['base64']:
+        """Return the JSON format for the encoded data."""
         return 'base64'
 
 
