@@ -18,19 +18,17 @@ if TYPE_CHECKING:
 
 
 @overload
-def validate_arguments(func: None = None, *, config: 'ConfigType' = None) -> Callable[['AnyCallableT'], 'AnyCallableT']:
-    ...
+def validate_arguments(
+    func: None = None, *, config: 'ConfigType' = None
+) -> Callable[['AnyCallableT'], 'AnyCallableT']: ...
 
 
 @overload
-def validate_arguments(func: 'AnyCallableT') -> 'AnyCallableT':
-    ...
+def validate_arguments(func: 'AnyCallableT') -> 'AnyCallableT': ...
 
 
 def validate_arguments(func: Optional['AnyCallableT'] = None, *, config: 'ConfigType' = None) -> Any:
-    """
-    Decorator to validate the arguments passed to a function.
-    """
+    """Decorator to validate the arguments passed to a function."""
 
     def validate(_func: 'AnyCallable') -> 'AnyCallable':
         vd = ValidatedFunction(_func, config)
@@ -177,33 +175,37 @@ class ValidatedFunction:
         return values
 
     def execute(self, m: BaseModel) -> Any:
-        d = {k: v for k, v in m._iter() if k in m.__fields_set__ or m.__fields__[k].default_factory}
-        var_kwargs = d.pop(self.v_kwargs_name, {})
+        fields_set = m.__fields_set__
+        iter_fields = m._iter
+        __fields__ = m.__fields__
+        raw_function = self.raw_function
 
-        if self.v_args_name in d:
-            args_: List[Any] = []
+        data = {k: v for k, v in iter_fields() if k in fields_set or (__fields__[k].default_factory is not None)}
+
+        var_kwargs = data.pop(self.v_kwargs_name, {})
+
+        def build_args_kwargs(data):
+            args_, kwargs = [], {}
             in_kwargs = False
-            kwargs = {}
-            for name, value in d.items():
+            for name, value in data.items():
                 if in_kwargs:
                     kwargs[name] = value
-                elif name == self.v_args_name:
-                    args_ += value
-                    in_kwargs = True
                 else:
                     args_.append(value)
-            return self.raw_function(*args_, **kwargs, **var_kwargs)
-        elif self.positional_only_args:
-            args_ = []
-            kwargs = {}
-            for name, value in d.items():
-                if name in self.positional_only_args:
-                    args_.append(value)
-                else:
-                    kwargs[name] = value
-            return self.raw_function(*args_, **kwargs, **var_kwargs)
-        else:
-            return self.raw_function(**d, **var_kwargs)
+                    if name == self.v_args_name:
+                        in_kwargs = True
+            return args_, kwargs
+
+        if self.v_args_name in data:
+            args_, kwargs = build_args_kwargs(data)
+            return raw_function(*args_, **kwargs, **var_kwargs)
+
+        if self.positional_only_args:
+            args_ = [value for name, value in data.items() if name in self.positional_only_args]
+            kwargs = {name: value for name, value in data.items() if name not in self.positional_only_args}
+            return raw_function(*args_, **kwargs, **var_kwargs)
+
+        return raw_function(**data, **var_kwargs)
 
     def create_model(self, fields: Dict[str, Any], takes_args: bool, takes_kwargs: bool, config: 'ConfigType') -> None:
         pos_args = len(self.arg_mapping)
