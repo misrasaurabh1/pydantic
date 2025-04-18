@@ -58,8 +58,7 @@ def validator(
     whole: Optional[bool] = None,
     allow_reuse: bool = False,
 ) -> Callable[[AnyCallable], 'AnyClassMethod']:
-    """
-    Decorate methods on the class indicating that they should be used to validate fields
+    """Decorate methods on the class indicating that they should be used to validate fields
     :param fields: which field(s) the method should be called on
     :param pre: whether or not this validator should be called before the standard validators (else after)
     :param each_item: for complex objects (sets, lists etc.) whether to validate individual elements rather than the
@@ -72,12 +71,12 @@ def validator(
         raise ConfigError('validator with no fields specified')
     elif isinstance(fields[0], FunctionType):
         raise ConfigError(
-            "validators should be used with fields and keyword arguments, not bare. "  # noqa: Q000
+            'validators should be used with fields and keyword arguments, not bare. '
             "E.g. usage should be `@validator('<field_name>', ...)`"
         )
     elif not all(isinstance(field, str) for field in fields):
         raise ConfigError(
-            "validator fields should be passed as separate string args. "  # noqa: Q000
+            'validator fields should be passed as separate string args. '
             "E.g. usage should be `@validator('<field_name_1>', '<field_name_2>', ...)`"
         )
 
@@ -119,8 +118,7 @@ def root_validator(
 def root_validator(
     _func: Optional[AnyCallable] = None, *, pre: bool = False, allow_reuse: bool = False, skip_on_failure: bool = False
 ) -> Union['AnyClassMethod', Callable[[AnyCallable], 'AnyClassMethod']]:
-    """
-    Decorate methods on a model indicating that they should be used to validate (and perhaps modify) data either
+    """Decorate methods on a model indicating that they should be used to validate (and perhaps modify) data either
     before or after standard model parsing/validation is performed.
     """
     if _func:
@@ -141,8 +139,7 @@ def root_validator(
 
 
 def _prepare_validator(function: AnyCallable, allow_reuse: bool) -> 'AnyClassMethod':
-    """
-    Avoid validators with duplicated names since without this, validators can be overwritten silently
+    """Avoid validators with duplicated names since without this, validators can be overwritten silently
     which generally isn't the intended behaviour, don't run in ipython (see #312) or if allow_reuse is False.
     """
     f_cls = function if isinstance(function, classmethod) else classmethod(function)
@@ -187,7 +184,7 @@ class ValidatorGroup:
         if unused_validators:
             fn = ', '.join(unused_validators)
             raise ConfigError(
-                f"Validators defined with incorrect fields: {fn} "  # noqa: Q000
+                f'Validators defined with incorrect fields: {fn} '
                 f"(use check_fields=False if you're inheriting from the model and intended this)"
             )
 
@@ -233,15 +230,15 @@ def extract_root_validators(namespace: Dict[str, Any]) -> Tuple[List[AnyCallable
 
 def inherit_validators(base_validators: 'ValidatorListDict', validators: 'ValidatorListDict') -> 'ValidatorListDict':
     for field, field_validators in base_validators.items():
-        if field not in validators:
-            validators[field] = []
-        validators[field] += field_validators
+        if field in validators:
+            validators[field].extend(field_validators)
+        else:
+            validators[field] = field_validators[:]
     return validators
 
 
 def make_generic_validator(validator: AnyCallable) -> 'ValidatorCallable':
-    """
-    Make a generic function which calls a validator with the right arguments.
+    """Make a generic function which calls a validator with the right arguments.
 
     Unfortunately other approaches (eg. return a partial of a function that builds the arguments) is slow,
     hence this laborious way of doing things.
