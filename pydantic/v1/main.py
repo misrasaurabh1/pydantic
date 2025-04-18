@@ -100,10 +100,15 @@ def validate_custom_root_type(fields: Dict[str, ModelField]) -> None:
 
 
 def generate_hash_function(frozen: bool) -> Optional[Callable[[Any], int]]:
-    def hash_function(self_: Any) -> int:
-        return hash(self_.__class__) + hash(tuple(self_.__dict__.values()))
+    if not frozen:
+        return None
 
-    return hash_function if frozen else None
+    def hash_function(self_: Any) -> int:
+        cls_hash = hash(self_.__class__)
+        values_hash = hash(tuple(self_.__dict__.values()))
+        return cls_hash + values_hash
+
+    return hash_function
 
 
 # If a field is of type `Callable`, its default value should be a function and cannot to ignored.
@@ -119,7 +124,7 @@ _is_base_model_class_defined = False
 
 @dataclass_transform(kw_only_default=True, field_specifiers=(Field,))
 class ModelMetaclass(ABCMeta):
-    @no_type_check  # noqa C901
+    @no_type_check  # C901
     def __new__(mcs, name, bases, namespace, **kwargs):  # noqa C901
         fields: Dict[str, ModelField] = {}
         config = BaseConfig
@@ -296,8 +301,7 @@ class ModelMetaclass(ABCMeta):
         return cls
 
     def __instancecheck__(self, instance: Any) -> bool:
-        """
-        Avoid calling ABC _abc_subclasscheck unless we're pretty sure.
+        """Avoid calling ABC _abc_subclasscheck unless we're pretty sure.
 
         See #3829 and python/cpython#92810
         """
@@ -330,8 +334,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
     __doc__ = ''  # Null out the Representation docstring
 
     def __init__(__pydantic_self__, **data: Any) -> None:
-        """
-        Create a new model by parsing and validating input data from keyword arguments.
+        """Create a new model by parsing and validating input data from keyword arguments.
 
         Raises ValidationError if the input data cannot be parsed to form a valid model.
         """
@@ -435,10 +438,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         exclude_defaults: bool = False,
         exclude_none: bool = False,
     ) -> 'DictStrAny':
-        """
-        Generate a dictionary representation of the model, optionally specifying which fields to include or exclude.
-
-        """
+        """Generate a dictionary representation of the model, optionally specifying which fields to include or exclude."""
         if skip_defaults is not None:
             warnings.warn(
                 f'{self.__class__.__name__}.dict(): "skip_defaults" is deprecated and replaced by "exclude_unset"',
@@ -472,8 +472,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         models_as_dict: bool = True,
         **dumps_kwargs: Any,
     ) -> str:
-        """
-        Generate a JSON representation of the model, `include` and `exclude` arguments as per `dict()`.
+        """Generate a JSON representation of the model, `include` and `exclude` arguments as per `dict()`.
 
         `encoder` is an optional function to supply as `default` to json.dumps(), other arguments as per `json.dumps()`.
         """
@@ -584,8 +583,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
 
     @classmethod
     def construct(cls: Type['Model'], _fields_set: Optional['SetStr'] = None, **values: Any) -> 'Model':
-        """
-        Creates a new model setting __dict__ and __fields_set__ from trusted or pre-validated data.
+        """Creates a new model setting __dict__ and __fields_set__ from trusted or pre-validated data.
         Default values are respected, but no other validation is performed.
         Behaves as if `Config.extra = 'allow'` was set since it adds all passed values
         """
@@ -632,8 +630,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         update: Optional['DictStrAny'] = None,
         deep: bool = False,
     ) -> 'Model':
-        """
-        Duplicate a model, optionally choose which fields to include, exclude and change.
+        """Duplicate a model, optionally choose which fields to include, exclude and change.
 
         :param include: fields to include in new model
         :param exclude: fields to exclude from new model, as with values this takes precedence over include
@@ -642,7 +639,6 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         :param deep: set to `True` to make a deep copy of the model
         :return: new model instance
         """
-
         values = dict(
             self._iter(to_dict=False, by_alias=False, include=include, exclude=exclude, exclude_unset=False),
             **(update or {}),
@@ -800,23 +796,18 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
 
     @classmethod
     def __try_update_forward_refs__(cls, **localns: Any) -> None:
-        """
-        Same as update_forward_refs but will not raise exception
+        """Same as update_forward_refs but will not raise exception
         when forward references are not defined.
         """
         update_model_forward_refs(cls, cls.__fields__.values(), cls.__config__.json_encoders, localns, (NameError,))
 
     @classmethod
     def update_forward_refs(cls, **localns: Any) -> None:
-        """
-        Try to update ForwardRefs on fields based on this Model, globalns and localns.
-        """
+        """Try to update ForwardRefs on fields based on this Model, globalns and localns."""
         update_model_forward_refs(cls, cls.__fields__.values(), cls.__config__.json_encoders, localns)
 
     def __iter__(self) -> 'TupleGenerator':
-        """
-        so `dict(model)` works
-        """
+        """So `dict(model)` works"""
         yield from self.__dict__.items()
 
     def _iter(
@@ -838,7 +829,9 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
             include = ValueItems.merge(self.__include_fields__, include, intersect=True)
 
         allowed_keys = self._calculate_keys(
-            include=include, exclude=exclude, exclude_unset=exclude_unset  # type: ignore
+            include=include,
+            exclude=exclude,
+            exclude_unset=exclude_unset,  # type: ignore
         )
         if allowed_keys is None and not (to_dict or by_alias or exclude_unset or exclude_defaults or exclude_none):
             # huge boost for plain _iter()
@@ -958,8 +951,7 @@ def create_model(
     __slots__: Optional[Tuple[str, ...]] = None,
     **field_definitions: Any,
 ) -> Type['Model']:
-    """
-    Dynamically create a model.
+    """Dynamically create a model.
     :param __model_name: name of the created model
     :param __config__: config class to use for the new model
     :param __base__: base class for the new model to inherit from
@@ -1030,9 +1022,7 @@ _missing = object()
 def validate_model(  # noqa: C901 (ignore complexity)
     model: Type[BaseModel], input_data: 'DictStrAny', cls: 'ModelOrDc' = None
 ) -> Tuple['DictStrAny', 'SetStr', Optional[ValidationError]]:
-    """
-    validate data against a model.
-    """
+    """Validate data against a model."""
     values = {}
     errors = []
     # input_data names, possibly alias
