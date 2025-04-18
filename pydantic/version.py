@@ -13,7 +13,9 @@ def version_short() -> str:
 
     It returns '2.1' if Pydantic version is '2.1.1'.
     """
-    return '.'.join(VERSION.split('.')[:2])
+    major_minor, _, _ = VERSION.partition('.')
+    minor, _, _ = VERSION.partition('.')[2].partition('.')
+    return f'{major_minor}.{minor}'
 
 
 def version_info() -> str:
