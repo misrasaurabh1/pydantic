@@ -88,12 +88,12 @@ def _display_error_loc(error: 'ErrorDict') -> str:
 
 
 def _display_error_type_and_ctx(error: 'ErrorDict') -> str:
-    t = 'type=' + error['type']
     ctx = error.get('ctx')
     if ctx:
-        return t + ''.join(f'; {k}={v}' for k, v in ctx.items())
+        ctx_str = '; '.join(f'{k}={v}' for k, v in ctx.items())
+        return f"type={error['type']}; {ctx_str}"
     else:
-        return t
+        return f"type={error['type']}"
 
 
 def flatten_errors(
