@@ -21,8 +21,7 @@ def isoformat(o: Union[datetime.date, datetime.time]) -> str:
 
 
 def decimal_encoder(dec_value: Decimal) -> Union[int, float]:
-    """
-    Encodes a Decimal as int of there's no exponent, otherwise float
+    """Encodes a Decimal as int of there's no exponent, otherwise float
 
     This is useful when we use ConstrainedDecimal to represent Numeric(x,0)
     where a integer (but not int typed) is used. Encoding this as a float
@@ -104,9 +103,13 @@ def custom_pydantic_encoder(type_encoders: Dict[Any, Callable[[Type[Any]], Any]]
 
 
 def timedelta_isoformat(td: datetime.timedelta) -> str:
-    """
-    ISO 8601 encoding for Python timedelta object.
-    """
-    minutes, seconds = divmod(td.seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    return f'{"-" if td.days < 0 else ""}P{abs(td.days)}DT{hours:d}H{minutes:d}M{seconds:d}.{td.microseconds:06d}S'
+    """ISO 8601 encoding for Python timedelta object."""
+    total_seconds = td.seconds
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    microseconds = td.microseconds
+    days = abs(td.days)
+
+    sign = '-' if td.days < 0 else ''
+    return f'{sign}P{days}DT{hours}H{minutes}M{seconds}.{microseconds:06d}S'
