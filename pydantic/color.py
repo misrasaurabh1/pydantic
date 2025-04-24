@@ -448,7 +448,7 @@ def float_to_255(c: float) -> int:
     Raises:
         ValueError: If the given float value is outside the acceptable range of 0 to 1 (inclusive).
     """
-    return int(round(c * 255))
+    return round(c * 255)
 
 
 COLORS_BY_NAME = {
