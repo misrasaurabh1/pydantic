@@ -1,5 +1,4 @@
-"""
-The main purpose is to enhance stdlib dataclasses by adding validation
+"""The main purpose is to enhance stdlib dataclasses by adding validation
 A pydantic dataclass can be generated from scratch or from a stdlib one.
 
 Behind the scene, a pydantic dataclass is just like a regular one on which we attach
@@ -31,11 +30,15 @@ This means we **don't want to create a new dataclass that inherits from it**
 The trick is to create a wrapper around `M` that will act as a proxy to trigger
 validation without altering default `M` behaviour.
 """
+
 import copy
 import dataclasses
 import sys
 from contextlib import contextmanager
 from functools import wraps
+from typing import Any, Generator, Type
+
+from pydantic.v1.errors import DataclassTypeError
 
 try:
     from functools import cached_property
@@ -43,14 +46,13 @@ except ImportError:
     # cached_property available only for python3.8+
     pass
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, Generator, Optional, Type, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Callable, ClassVar, Dict, Optional, TypeVar, Union, overload
 
 from typing_extensions import dataclass_transform
 
 from pydantic.v1.class_validators import gather_all_validators
 from pydantic.v1.config import BaseConfig, ConfigDict, Extra, get_config
 from pydantic.v1.error_wrappers import ValidationError
-from pydantic.v1.errors import DataclassTypeError
 from pydantic.v1.fields import Field, FieldInfo, Required, Undefined
 from pydantic.v1.main import create_model, validate_model
 from pydantic.v1.utils import ClassAttribute
@@ -115,8 +117,7 @@ if sys.version_info >= (3, 10):
         validate_on_init: Optional[bool] = None,
         use_proxy: Optional[bool] = None,
         kw_only: bool = ...,
-    ) -> Callable[[Type[_T]], 'DataclassClassOrWrapper']:
-        ...
+    ) -> Callable[[Type[_T]], 'DataclassClassOrWrapper']: ...
 
     @dataclass_transform(field_specifiers=(dataclasses.field, Field))
     @overload
@@ -133,8 +134,7 @@ if sys.version_info >= (3, 10):
         validate_on_init: Optional[bool] = None,
         use_proxy: Optional[bool] = None,
         kw_only: bool = ...,
-    ) -> 'DataclassClassOrWrapper':
-        ...
+    ) -> 'DataclassClassOrWrapper': ...
 
 else:
 
@@ -151,8 +151,7 @@ else:
         config: Union[ConfigDict, Type[object], None] = None,
         validate_on_init: Optional[bool] = None,
         use_proxy: Optional[bool] = None,
-    ) -> Callable[[Type[_T]], 'DataclassClassOrWrapper']:
-        ...
+    ) -> Callable[[Type[_T]], 'DataclassClassOrWrapper']: ...
 
     @dataclass_transform(field_specifiers=(dataclasses.field, Field))
     @overload
@@ -168,8 +167,7 @@ else:
         config: Union[ConfigDict, Type[object], None] = None,
         validate_on_init: Optional[bool] = None,
         use_proxy: Optional[bool] = None,
-    ) -> 'DataclassClassOrWrapper':
-        ...
+    ) -> 'DataclassClassOrWrapper': ...
 
 
 @dataclass_transform(field_specifiers=(dataclasses.field, Field))
@@ -187,8 +185,7 @@ def dataclass(
     use_proxy: Optional[bool] = None,
     kw_only: bool = False,
 ) -> Union[Callable[[Type[_T]], 'DataclassClassOrWrapper'], 'DataclassClassOrWrapper']:
-    """
-    Like the python standard lib dataclasses but with type validation.
+    """Like the python standard lib dataclasses but with type validation.
     The result is either a pydantic dataclass that will validate input data
     or a wrapper that will trigger validation around a stdlib dataclass
     to avoid modifying it directly
@@ -280,8 +277,7 @@ def _add_pydantic_validation_attributes(  # noqa: C901 (ignore complexity)
     validate_on_init: bool,
     dc_cls_doc: str,
 ) -> None:
-    """
-    We need to replace the right method. If no `__post_init__` has been set in the stdlib dataclass
+    """We need to replace the right method. If no `__post_init__` has been set in the stdlib dataclass
     it won't even exist (code is generated on the fly by `dataclasses`)
     By default, we run validation after `__init__` or `__post_init__` if defined
     """
@@ -319,8 +315,8 @@ def _add_pydantic_validation_attributes(  # noqa: C901 (ignore complexity)
             if config.post_init_call == 'after_validation':
                 post_init(self, *args, **kwargs)
 
-        setattr(dc_cls, '__init__', handle_extra_init)
-        setattr(dc_cls, '__post_init__', new_post_init)
+        dc_cls.__init__ = handle_extra_init
+        dc_cls.__post_init__ = new_post_init
 
     else:
 
@@ -347,17 +343,17 @@ def _add_pydantic_validation_attributes(  # noqa: C901 (ignore complexity)
 
                 self.__post_init_post_parse__(**initvars_and_values)
 
-        setattr(dc_cls, '__init__', new_init)
+        dc_cls.__init__ = new_init
 
-    setattr(dc_cls, '__pydantic_run_validation__', ClassAttribute('__pydantic_run_validation__', validate_on_init))
-    setattr(dc_cls, '__pydantic_initialised__', False)
-    setattr(dc_cls, '__pydantic_model__', create_pydantic_model_from_dataclass(dc_cls, config, dc_cls_doc))
-    setattr(dc_cls, '__pydantic_validate_values__', _dataclass_validate_values)
-    setattr(dc_cls, '__validate__', classmethod(_validate_dataclass))
-    setattr(dc_cls, '__get_validators__', classmethod(_get_validators))
+    dc_cls.__pydantic_run_validation__ = ClassAttribute('__pydantic_run_validation__', validate_on_init)
+    dc_cls.__pydantic_initialised__ = False
+    dc_cls.__pydantic_model__ = create_pydantic_model_from_dataclass(dc_cls, config, dc_cls_doc)
+    dc_cls.__pydantic_validate_values__ = _dataclass_validate_values
+    dc_cls.__validate__ = classmethod(_validate_dataclass)
+    dc_cls.__get_validators__ = classmethod(_get_validators)
 
     if dc_cls.__pydantic_model__.__config__.validate_assignment and not dc_cls.__dataclass_params__.frozen:
-        setattr(dc_cls, '__setattr__', _dataclass_validate_assignment_setattr)
+        dc_cls.__setattr__ = _dataclass_validate_assignment_setattr
 
 
 def _get_validators(cls: 'DataclassClassOrWrapper') -> 'CallableGenerator':
@@ -365,7 +361,9 @@ def _get_validators(cls: 'DataclassClassOrWrapper') -> 'CallableGenerator':
 
 
 def _validate_dataclass(cls: Type['DataclassT'], v: Any) -> 'DataclassT':
-    with set_validation(cls, True):
+    original_run_validation = cls.__pydantic_run_validation__
+    cls.__pydantic_run_validation__ = True
+    try:
         if isinstance(v, cls):
             v.__pydantic_validate_values__()
             return v
@@ -375,6 +373,8 @@ def _validate_dataclass(cls: Type['DataclassT'], v: Any) -> 'DataclassT':
             return cls(**v)
         else:
             raise DataclassTypeError(class_name=cls.__name__)
+    finally:
+        cls.__pydantic_run_validation__ = original_run_validation
 
 
 def create_pydantic_model_from_dataclass(
@@ -385,7 +385,7 @@ def create_pydantic_model_from_dataclass(
     field_definitions: Dict[str, Any] = {}
     for field in dataclasses.fields(dc_cls):
         default: Any = Undefined
-        default_factory: Optional['NoArgAnyCallable'] = None
+        default_factory: Optional[NoArgAnyCallable] = None
         field_info: FieldInfo
 
         if field.default is not dataclasses.MISSING:
@@ -404,7 +404,7 @@ def create_pydantic_model_from_dataclass(
         field_definitions[field.name] = (field.type, field_info)
 
     validators = gather_all_validators(dc_cls)
-    model: Type['BaseModel'] = create_model(
+    model: Type[BaseModel] = create_model(
         dc_cls.__name__,
         __config__=config,
         __module__=dc_cls.__module__,
@@ -430,7 +430,7 @@ else:
 def _dataclass_validate_values(self: 'Dataclass') -> None:
     # validation errors can occur if this function is called twice on an already initialised dataclass.
     # for example if Extra.forbid is enabled, it would consider __pydantic_initialised__ an invalid extra property
-    if getattr(self, '__pydantic_initialised__'):
+    if self.__pydantic_initialised__:
         return
     if getattr(self, '__pydantic_has_field_info_default__', False):
         # We need to remove `FieldInfo` values since they are not valid as input
@@ -463,8 +463,7 @@ def _dataclass_validate_assignment_setattr(self: 'Dataclass', name: str, value: 
 
 
 def is_builtin_dataclass(_cls: Type[Any]) -> bool:
-    """
-    Whether a class is a stdlib dataclass
+    """Whether a class is a stdlib dataclass
     (useful to discriminated a pydantic dataclass that is actually a wrapper around a stdlib dataclass)
 
     we check that
@@ -492,8 +491,7 @@ def is_builtin_dataclass(_cls: Type[Any]) -> bool:
 
 
 def make_dataclass_validator(dc_cls: Type['Dataclass'], config: Type[BaseConfig]) -> 'CallableGenerator':
-    """
-    Create a pydantic.dataclass from a builtin dataclass to add type validation
+    """Create a pydantic.dataclass from a builtin dataclass to add type validation
     and yield the validators
     It retrieves the parameters of the dataclass and forwards them to the newly created dataclass
     """
