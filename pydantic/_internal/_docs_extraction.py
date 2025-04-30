@@ -17,7 +17,7 @@ class DocstringVisitor(ast.NodeVisitor):
         self.previous_node_type: type[ast.AST] | None = None
 
     def visit(self, node: ast.AST) -> Any:
-        node_result = super().visit(node)
+        node_result = ast.NodeVisitor.visit(self, node)
         self.previous_node_type = type(node)
         return node_result
 
